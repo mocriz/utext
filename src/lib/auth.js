@@ -110,3 +110,9 @@ export async function updateUsername(username) {
   if (error) throw error
   return true
 }
+
+// Logout
+export async function logout() {
+  session = { userId: null, privateKey: null, publicKey: null }
+  await supabase.auth.signOut()
+}
