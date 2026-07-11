@@ -101,13 +101,20 @@ export async function loadMessages(conversationId) {
   if (error) throw error
   const ss = await sharedSecretWith(partnerOf(conversationId))
   return await Promise.all(
-    (data || []).map(async (m) => ({
-      id: m.id,
-      senderId: m.sender_id,
-      plaintext: await decryptText(ss, m.ciphertext, m.nonce),
-      createdAt: m.created_at,
-      mediaPath: m.media_path,
-    }))
+    (data || []).map(async (m) => {
+      const plaintext = m.ciphertext
+        ? await decryptText(ss, m.ciphertext, m.nonce)
+        : null
+      return {
+        id: m.id,
+        senderId: m.sender_id,
+        plaintext,
+        createdAt: m.created_at,
+        mediaPath: m.media_path,
+        media_iv: m.media_iv,
+        media_type: m.media_type,
+      }
+    })
   )
 }
 
