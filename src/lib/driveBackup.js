@@ -1,7 +1,7 @@
 // src/lib/driveBackup.js
 // Backup / restore RAW private key ke Google Drive user (scope drive.file).
-// Keputusan: NO passphrase -> user ga perlu inget apa-apa. File di Drive = trust anchor.
-// Private key disimpan sebagai base64 JSON { privateKey }.
+// NO passphrase -> user ga perlu inget apa-apa. File di Drive = trust anchor.
+// Token di-cache di localStorage -> consent cuma 1x (reuse grant silent setelahnya).
 import { supabase } from './supabase'
 
 const DRIVE_FILE_NAME = 'utext-key.backup.json'
@@ -14,11 +14,11 @@ const LS_KEY = 'utext_drive_token'
 
 // restore token dari localStorage (biar consent ga muncul tiap refresh)
 try { accessToken = localStorage.getItem(LS_KEY) || null } catch {}
-
 function cacheToken(t) {
   accessToken = t
   try { localStorage.setItem(LS_KEY, t) } catch {}
 }
+function clearToken() { accessToken = null; try { localStorage.removeItem(LS_KEY) } catch {} }
 
 function ensureTokenClient() {
   if (tokenClient) return tokenClient
@@ -33,8 +33,8 @@ function ensureTokenClient() {
   return tokenClient
 }
 
-// Minta consent 1x (user klik Izinkan). Auto-silent setelahnya.
-// Ada timeout biar ga hang kalau popup ke-block browser.
+// Minta token. TANPA prompt:'consent' -> pertama kali otomatis consent,
+// setelahnya reuse grant secara silent (ga muncul layar izin lagi).
 export async function authorizeDrive() {
   ensureTokenClient()
   return new Promise((resolve, reject) => {
@@ -46,7 +46,7 @@ export async function authorizeDrive() {
       resolve(resp.access_token)
     }
     try {
-      tokenClient.requestAccessToken({ prompt: 'consent' })
+      tokenClient.requestAccessToken() // no prompt -> silent reuse
     } catch (e) {
       clearTimeout(timer)
       reject(e)
@@ -54,55 +54,70 @@ export async function authorizeDrive() {
   })
 }
 
-// Cari file backup lama di appDataFolder
 async function findBackupFile() {
   const res = await fetch(
     `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${DRIVE_FILE_NAME}'&fields=files(id)`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   )
+  if (res.status === 401) throw new Error('UNAUTH')
   const json = await res.json()
   return json.files?.[0]?.id || null
 }
 
+// Wrapper: kalau token expired (401) -> re-auth 1x lalu retry
+async function authed(fn) {
+  if (!accessToken) await authorizeDrive()
+  try {
+    return await fn()
+  } catch (e) {
+    if (e.message === 'UNAUTH') {
+      clearToken()
+      await authorizeDrive()
+      return await fn()
+    }
+    throw e
+  }
+}
+
 // Backup RAW private key (auto-silent)
 export async function backupPrivateKey(privateKeyB64) {
-  if (!accessToken) await authorizeDrive()
-  const body = new Blob([JSON.stringify({ privateKey: privateKeyB64 })], { type: 'application/json' })
-  const existingId = await findBackupFile()
-  const form = new FormData()
-  form.append('metadata', new Blob([JSON.stringify({ name: DRIVE_FILE_NAME, parents: ['appDataFolder'] })], { type: 'application/json' }))
-  form.append('file', body)
-
-  const url =
-    existingId
+  await authed(async () => {
+    const body = new Blob([JSON.stringify({ privateKey: privateKeyB64 })], { type: 'application/json' })
+    const existingId = await findBackupFile()
+    const form = new FormData()
+    form.append('metadata', new Blob([JSON.stringify({ name: DRIVE_FILE_NAME, parents: ['appDataFolder'] })], { type: 'application/json' }))
+    form.append('file', body)
+    const url = existingId
       ? `https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=multipart`
       : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart'
-  const method = existingId ? 'PATCH' : 'POST'
-
-  const res = await fetch(url, {
-    method,
-    headers: { Authorization: `Bearer ${accessToken}` },
-    body: form,
+    const method = existingId ? 'PATCH' : 'POST'
+    const res = await fetch(url, { method, headers: { Authorization: `Bearer ${accessToken}` }, body: form })
+    if (res.status === 401) throw new Error('UNAUTH')
+    if (!res.ok) throw new Error('Drive upload gagal: ' + res.status)
   })
-  if (!res.ok) throw new Error('Drive upload gagal: ' + res.status)
   return true
 }
 
 // Restore RAW private key
 export async function restorePrivateKey() {
-  if (!accessToken) await authorizeDrive()
-  const id = await findBackupFile()
-  if (!id) throw new Error('Backup tidak ditemukan di Drive')
-  const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
+  return await authed(async () => {
+    const id = await findBackupFile()
+    if (!id) throw new Error('Backup tidak ditemukan di Drive')
+    const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (dl.status === 401) throw new Error('UNAUTH')
+    if (!dl.ok) throw new Error('Download gagal: ' + dl.status)
+    const json = await dl.json()
+    return json.privateKey
   })
-  if (!dl.ok) throw new Error('Download gagal: ' + dl.status)
-  const json = await dl.json()
-  return json.privateKey
 }
 
-// Cek apakah sudah pernah ada backup (buat flow "restore vs new" di ganti device)
+// Cek apakah sudah pernah ada backup
 export async function hasBackup() {
-  if (!accessToken) await authorizeDrive()
-  return (await findBackupFile()) !== null
+  try {
+    return (await authed(() => findBackupFile())) !== null
+  } catch {
+    return false
+  }
 }

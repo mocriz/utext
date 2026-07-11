@@ -41,20 +41,38 @@ export async function startConversationWith(targetUserId) {
   return data // conversation id
 }
 
-// Ambil list conversation milik user (via conversation_members)
+// Ambil list conversation milik user + partner-nya (tanpa embedding PostgREST
+// yang gagal karena FK conversation_members.user_id -> auth.users, bukan profiles)
 export async function listConversations() {
   const me = getSession().userId
   const { data, error } = await supabase
     .from('conversation_members')
-    .select('conversation_id, profiles:user_id(id, username, display_name, avatar_url)')
+    .select('conversation_id')
     .eq('user_id', me)
   if (error) throw error
-  // filter out diri sendiri, ambil partner
-  const convs = (data || []).map((row) => {
-    const partner = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
-    return { conversationId: row.conversation_id, partner }
+  const convIds = (data || []).map((d) => d.conversation_id)
+  if (!convIds.length) return []
+
+  const { data: members, error: e2 } = await supabase
+    .from('conversation_members')
+    .select('conversation_id, user_id')
+    .in('conversation_id', convIds)
+  if (e2) throw e2
+
+  const partnerIds = [...new Set(members.filter((m) => m.user_id !== me).map((m) => m.user_id))]
+  const profilesMap = {}
+  if (partnerIds.length) {
+    const { data: profs } = await supabase
+      .from('profiles')
+      .select('id, username, display_name, avatar_url')
+      .in('id', partnerIds)
+    profs?.forEach((p) => (profilesMap[p.id] = p))
+  }
+
+  return convIds.map((cid) => {
+    const partnerId = members.find((m) => m.conversation_id === cid && m.user_id !== me)?.user_id
+    return { conversationId: cid, partner: profilesMap[partnerId] || { id: partnerId } }
   })
-  return convs
 }
 
 // Load pesan lama (decrypt semua)

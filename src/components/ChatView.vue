@@ -1,13 +1,13 @@
 <!-- src/components/ChatView.vue -->
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import {
   searchUsers, startConversationWith, listConversations, loadMessages,
   sendText, sendPhoto, subscribeMessages, rememberPartner, getPhoto,
 } from '../lib/chat'
 import { getSession, getMyProfile, updateUsername, logout } from '../lib/auth'
 
-const me = getSession().userId
+const me = ref(getSession().userId)
 const myUsername = ref('')
 const conversations = ref([])
 const activeConv = ref(null)
@@ -20,6 +20,9 @@ const unsub = ref(null)
 const photoInput = ref(null)
 const editing = ref(false)
 const newUsername = ref('')
+const photoUrls = ref({}) // messageId -> objectURL
+
+watch(me, (v) => { me.value = v })
 
 onMounted(async () => {
   const p = await getMyProfile()
@@ -27,7 +30,7 @@ onMounted(async () => {
   conversations.value = await listConversations()
 })
 
-onUnmounted(() => unsub.value?.())
+onUnmounted(() => { unsub.value?.(); Object.values(photoUrls.value).forEach(URL.revokeObjectURL) })
 
 async function saveUsername() {
   try {
@@ -49,6 +52,8 @@ async function openConversation(conv) {
   messages.value = await loadMessages(conv.conversationId)
   unsub.value?.()
   unsub.value = subscribeMessages(conv.conversationId, (m) => messages.value.push(m))
+  // preload foto
+  for (const m of messages.value) if (m.mediaPath) await preloadPhoto(m)
 }
 
 async function startChat(user) {
@@ -65,7 +70,7 @@ async function send() {
   const text = draft.value
   draft.value = ''
   await sendText(activeConv.value, partner.value.id, text)
-  messages.value.push({ id: crypto.randomUUID(), senderId: me, plaintext: text, createdAt: new Date().toISOString() })
+  messages.value.push({ id: crypto.randomUUID(), senderId: me.value, plaintext: text, createdAt: new Date().toISOString() })
 }
 
 async function onPickPhoto(e) {
@@ -75,10 +80,10 @@ async function onPickPhoto(e) {
   e.target.value = ''
 }
 
-async function photoUrl(m) {
-  if (!m.mediaPath) return null
+async function preloadPhoto(m) {
+  if (photoUrls.value[m.id]) return
   const bytes = await getPhoto(activeConv.value, partner.value.id, m.mediaPath, m.media_iv)
-  return URL.createObjectURL(new Blob([bytes]))
+  photoUrls.value[m.id] = URL.createObjectURL(new Blob([bytes]))
 }
 </script>
 
@@ -109,7 +114,8 @@ async function photoUrl(m) {
       <div class="msgs">
         <div v-for="m in messages" :key="m.id" :class="['bubble', m.senderId === me ? 'me' : 'them']">
           <template v-if="m.plaintext">{{ m.plaintext }}</template>
-          <img v-else-if="m.mediaPath" :src="photoUrl(m)" class="photo" />
+          <img v-else-if="photoUrls[m.id]" :src="photoUrls[m.id]" class="photo" />
+          <span v-else-if="m.mediaPath">📷 loading…</span>
         </div>
       </div>
       <form @submit.prevent="send">
@@ -138,5 +144,5 @@ main { flex: 1; display: flex; flex-direction: column; }
 .them { background: #eee; }
 .photo { max-width: 200px; border-radius: 8px; }
 form { display: flex; padding: 8px; gap: 8px; border-top: 1px solid #ddd; }
-form input[type=text], form input:not([type=file]):not([type=button]) { flex: 1; padding: 8px; }
+form input:not([type=file]) { flex: 1; padding: 8px; }
 </style>
