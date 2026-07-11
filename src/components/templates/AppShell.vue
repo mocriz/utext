@@ -89,7 +89,7 @@ import {
   loadMessages, sendText, sendPhoto, subscribeMessages, editMessage,
   subscribeTyping, subscribePresence, rememberPartner, getPhoto, findExistingConversation,
   deleteConversation, deleteMessageForMe, deleteMessageForAll, markDelivered, markRead,
-  updateDisplayName, uploadAvatar,
+  updateDisplayName as rpcUpdateDisplayName, uploadAvatar,
 } from '../../lib/chat'
 import { backupToDrive, restoreFromDrive, updateUsername, getMyProfile, updateDisplayName, updateAvatar, softDeleteAccount } from '../../lib/auth'
 
@@ -339,7 +339,7 @@ async function onLogout() { await auth.logout(); location.reload() }
 async function onBackup() { await auth.backup(); alert('Key dibackup ke Google Drive.') }
 async function onRestore() { await auth.restore() }
 async function onSaveUsername(name) { await auth.editUsername(name); await refreshProfile() }
-async function onSaveDisplay(name) { await updateDisplayName(name); await refreshProfile() }
+async function onSaveDisplay(name) { await rpcUpdateDisplayName(name); await refreshProfile() }
 async function onAvatar(file) { await updateAvatar(file); await refreshProfile() }
 async function onDeleteAccount() {
   if (confirm('Hapus akun? Chat lawan tetap bisa dibaca. Login Gmail sama bisa kembali.')) {
