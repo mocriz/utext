@@ -41,10 +41,14 @@
               <div class="field">
                 <label>Username</label>
                 <div class="inline">
-                  <TextInput v-model="usernameDraft" placeholder="username" />
-                  <BaseButton size="sm" variant="primary" :disabled="!usernameDraft || saving" @click="saveUsername">Simpan</BaseButton>
+                  <TextInput v-model="usernameDraft" placeholder="username" @update:model-value="onUsernameType" />
+                  <BaseButton size="sm" variant="primary" :disabled="!usernameDraft || saving || usernameStatus === 'taken'" @click="saveUsername">Simpan</BaseButton>
                 </div>
-                <p v-if="usernameErr" class="err">{{ usernameErr }}</p>
+                <p v-if="usernameStatus === 'checking'" class="hint">mengecek…</p>
+                <p v-else-if="usernameStatus === 'available'" class="ok">✓ tersedia</p>
+                <p v-else-if="usernameStatus === 'taken'" class="err">✗ sudah dipakai</p>
+                <p v-else-if="usernameStatus === 'invalid'" class="err">✗ hanya a-z 0-9 _ (1-30)</p>
+                <p v-else-if="usernameErr" class="err">{{ usernameErr }}</p>
               </div>
 
               <div class="field">
@@ -136,12 +140,13 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import Avatar from '../atoms/Avatar.vue'
 import TextInput from '../atoms/TextInput.vue'
 import BaseButton from '../atoms/BaseButton.vue'
 import Toggle from '../atoms/Toggle.vue'
 import { useThemeStore } from '../../stores/theme'
+import { isUsernameAvailable } from '../../lib/auth'
 
 const props = defineProps({
   open: Boolean,
@@ -156,6 +161,7 @@ const section = ref('profile')
 const usernameDraft = ref(props.profile?.username || '')
 const displayDraft = ref(props.profile?.display_name || '')
 const usernameErr = ref('')
+const usernameStatus = ref('') // '' | checking | available | taken | invalid
 const saving = ref(false)
 const deleting = ref(false)
 const backing = ref(false)
@@ -164,15 +170,37 @@ const avatarName = ref('')
 const accent = ref('#1a73e8')
 const bubble = ref('#d9fdd3')
 
+const USER_RE = /^[a-z0-9_]{1,30}$/
+
 watch(() => props.profile, (p) => {
   if (p) { usernameDraft.value = p.username || ''; displayDraft.value = p.display_name || '' }
 }, { immediate: true })
 
+let checkTimer = null
+async function onUsernameType(v) {
+  usernameDraft.value = v
+  const val = (v || '').trim()
+  if (!val) { usernameStatus.value = ''; return }
+  if (!USER_RE.test(val)) { usernameStatus.value = 'invalid'; return }
+  if (val === props.profile?.username) { usernameStatus.value = ''; return }
+  usernameStatus.value = 'checking'
+  clearTimeout(checkTimer)
+  checkTimer = setTimeout(async () => {
+    try {
+      const ok = await isUsernameAvailable(val)
+      usernameStatus.value = ok ? 'available' : 'taken'
+    } catch { usernameStatus.value = '' }
+  }, 400)
+}
+
 function toggle(key) { emit('update:prefs', { ...props.prefs, [key]: !props.prefs[key] }) }
 function applyCustom() { theme.setCustom({ accent: accent.value, bubbleMe: bubble.value }) }
 async function saveUsername() {
+  const val = usernameDraft.value.trim()
+  if (!USER_RE.test(val)) { usernameStatus.value = 'invalid'; return }
+  if (usernameStatus.value === 'taken') return
   saving.value = true; usernameErr.value = ''
-  try { await emit('save-username', usernameDraft.value.trim()) } catch (e) { usernameErr.value = e.message }
+  try { await emit('save-username', val); usernameStatus.value = '' } catch (e) { usernameErr.value = e.message }
   saving.value = false
 }
 async function saveDisplay() { saving.value = true; await emit('save-display', displayDraft.value.trim()); saving.value = false }
@@ -204,6 +232,8 @@ function confirmDelete() { if (confirm('Hapus akun? Chat lawan tetap bisa dibaca
 .inline { display: flex; align-items: center; gap: 10px; }
 .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; }
 .err { color: var(--danger); font-size: 12px; }
+.hint { color: var(--muted); font-size: 12px; }
+.ok { color: #16a34a; font-size: 12px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { padding: 8px 14px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--fg); cursor: pointer; font-size: 13px; text-transform: capitalize; }
 .chip.active { border-color: var(--accent); color: var(--accent); font-weight: 700; }
