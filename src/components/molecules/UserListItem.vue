@@ -2,7 +2,7 @@
   <div class="user-item" @click="$emit('click', user)">
     <Avatar :src="user.avatar_url" :name="user.username || user.display_name" />
     <div class="meta">
-      <div class="name">@{{ user.username || user.display_name }}</div>
+      <div class="name">{{  user.display_name }}</div>
       <div v-if="user.display_name && user.username" class="sub">{{ user.display_name }}</div>
     </div>
   </div>

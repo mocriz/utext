@@ -10,7 +10,7 @@
     <Avatar :src="conv.partner?.avatar_url" :name="conv.partner?.username || conv.partner?.display_name" />
     <div class="mid">
       <div class="row">
-        <span class="name">@{{ conv.partner?.username || conv.partner?.display_name }}</span>
+        <span class="name">{{conv.partner?.display_name }}</span>
         <span class="time">{{ conv.lastTime }}</span>
       </div>
       <div class="row">

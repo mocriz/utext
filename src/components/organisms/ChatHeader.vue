@@ -3,7 +3,7 @@
     <IconButton icon="✕" title="Tutup chat" class="close" @click="$emit('back')" />
     <Avatar :src="partner.avatar_url" :name="partner.username || partner.display_name" size="md" />
     <div class="info">
-      <div class="name">@{{ partner.username || partner.display_name }}</div>
+      <div class="name">{{ partner.display_name }}</div>
       <div class="status">
         <StatusDot :on="online" />
         <span>{{ online ? 'online' : 'offline' }}</span>
