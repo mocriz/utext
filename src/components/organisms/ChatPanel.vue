@@ -1,6 +1,6 @@
 <template>
   <section class="chat-panel">
-    <ChatHeader :partner="partner" :online="online" @back="$emit('back')" />
+    <ChatHeader :partner="partner" :online="online" :typing="typing" @back="$emit('back')" />
     <MessageList
       :messages="messages"
       :me-id="meId"
