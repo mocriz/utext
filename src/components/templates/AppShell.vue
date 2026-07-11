@@ -57,7 +57,6 @@
     <!-- Settings sheet -->
     <SettingsSheet
       :open="ui.settingsOpen"
-      :section="settingsSection"
       :profile="auth.profile"
       :prefs="prefs"
       :identity-status="auth.identityStatus"
@@ -119,6 +118,14 @@ function fmtFull(d) {
   const dt = new Date(d)
   return dt.toLocaleString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
+// enrich pesan jadi shape untuk render (time, fullTime, edited, replyTo)
+function enrich(m) {
+  m.time = fmtTime(m.createdAt)
+  m.fullTime = fmtFull(m.createdAt)
+  m.edited = !!m.editedAt
+  return m
+}
+
 // poll status pesan kita (sent->delivered->read) dari DB
 let receiptTimer = null
 async function refreshReceipts(cid) {
