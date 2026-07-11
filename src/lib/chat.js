@@ -99,9 +99,16 @@ export async function loadMessages(conversationId) {
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: true })
   if (error) throw error
+  const me = getSession().userId
+  // filter: pesan yg dihapus "untuk semua", atau dihapus "untuk saya" (deleted_for[] mengandung kita)
+  const visible = (data || []).filter((m) => {
+    if (m.deleted_for_all) return false
+    if (Array.isArray(m.deleted_for) && m.deleted_for.includes(me)) return false
+    return true
+  })
   const ss = await sharedSecretWith(partnerOf(conversationId))
   return await Promise.all(
-    (data || []).map(async (m) => {
+    visible.map(async (m) => {
       const plaintext = m.ciphertext
         ? await decryptText(ss, m.ciphertext, m.nonce)
         : null
@@ -313,7 +320,7 @@ export async function getPhoto(conversationId, partnerId, path, iv) {
 
 // --- Delete / receipt / profile (Phase H) ---
 
-// Hapus percakapan (hapus membership kita -> hilang dari list kita)
+// Hapus percakapan "untuk saya" (hapus membership kita -> hilang dari list kita)
 export async function deleteConversation(conversationId) {
   const { error } = await supabase
     .from('conversation_members')
@@ -321,6 +328,14 @@ export async function deleteConversation(conversationId) {
     .eq('conversation_id', conversationId)
     .eq('user_id', getSession().userId)
   if (error) throw error
+}
+
+// Hapus percakapan "untuk semua" (hapus pesan + conversation -> lawan kehilangan semua)
+export async function deleteConversationForAll(conversationId) {
+  const { error: e1 } = await supabase.from('messages').delete().eq('conversation_id', conversationId)
+  if (e1) throw e1
+  const { error: e2 } = await supabase.from('conversations').delete().eq('id', conversationId)
+  if (e2) throw e2
 }
 
 // Hapus pesan "untuk saya" -> append user ke deleted_for[]
