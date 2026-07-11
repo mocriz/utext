@@ -24,7 +24,7 @@
         :online="room.partnerOnline"
         :draft="room.draft"
         :preview="pendingPhoto"
-        @back="ui.closeRoom()"
+        @back="closeRoom"
         @bubble-menu="onBubbleMenu"
         @update:draft="room.draft = $event"
         @typing="onTyping"
@@ -118,6 +118,20 @@ async function onOpen(c) {
   for (const m of room.messages) if (m.mediaPath) await preload(m)
 }
 function onNewChat(c) { onOpen(c) }
+
+// ---- close room -> balik ke list ----
+function closeRoom() {
+  ui.closeRoom()
+  activeConv.value = null
+  activePartner.value = null
+  room.messages = []
+  room.typing = false
+  msgCh?.(); msgCh = null
+  typingCh?.(); typingCh = null
+  presenceCh?.(); presenceCh = null
+  clearInterval(presenceTimer)
+  clearTimeout(typingTimer)
+}
 
 // ---- typing ----
 function setupTyping(cid) {

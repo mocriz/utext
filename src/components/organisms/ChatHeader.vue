@@ -1,6 +1,6 @@
 <template>
   <header class="chat-header">
-    <IconButton icon="‹" title="Kembali" class="back" @click="$emit('back')" />
+    <IconButton icon="✕" title="Tutup chat" class="close" @click="$emit('back')" />
     <Avatar :src="partner.avatar_url" :name="partner.username || partner.display_name" size="md" />
     <div class="info">
       <div class="name">@{{ partner.username || partner.display_name }}</div>
@@ -30,6 +30,7 @@ defineEmits(['back'])
   padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--surface);
 }
 .back { display: none; }
+.close { display: inline-flex; }
 .info { display: flex; flex-direction: column; }
 .name { font-weight: 600; font-size: 15px; }
 .status { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
