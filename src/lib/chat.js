@@ -198,6 +198,8 @@ export function subscribeMessages(conversationId, onNew) {
       { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
       async (payload) => {
         const m = payload.new
+        // jangan echo pesan kita sendiri (sudah di-push optimistic di onSend)
+        if (m.sender_id === getSession().userId) return
         try {
           const ss = await sharedSecretWith(partnerOf(conversationId))
           const plaintext = m.ciphertext ? await decryptText(ss, m.ciphertext, m.nonce) : null

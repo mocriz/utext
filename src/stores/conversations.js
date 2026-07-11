@@ -34,5 +34,9 @@ export const useConversationsStore = defineStore('conversations', {
       const c = this.items.find((x) => x.conversationId === conversationId)
       if (c) c.unread = 0
     },
+    setLast(conversationId, text) {
+      const c = this.items.find((x) => x.conversationId === conversationId)
+      if (c) c.lastMessage = text
+    },
   },
 })

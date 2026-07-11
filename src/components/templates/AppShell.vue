@@ -109,7 +109,8 @@ const myId = computed(() => auth.user?.id)
 const replyingTo = ref(null)   // { id, mine, name, text }
 const editingMsg = ref(null)   // message object yg lagi diedit
 const EDIT_WINDOW_MS = 10 * 60 * 1000
-
+const markedReadFor = new Set() // cegah markRead berulang per room
+const seenMsgIds = new Set()    // cegah duplikat pesan realtime
 function fmtTime(d) {
   const dt = new Date(d)
   return dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -147,6 +148,8 @@ async function refreshReceipts(cid) {
 
 // ---- open / switch room ----
 async function onOpen(c) {
+  // guard: kalau room sama masih aktif, jangan re-subscribe (cegah leak + spam echo)
+  if (activeConv.value === c.conversationId && room.messages.length) return
   activeConv.value = c.conversationId
   activePartner.value = c.partner
   ui.openRoom(c.conversationId)
@@ -155,8 +158,11 @@ async function onOpen(c) {
   room.messages = (await loadMessages(c.conversationId)).map(enrich)
   msgCh?.()
   msgCh = subscribeMessages(c.conversationId, (m) => {
+    if (seenMsgIds.has(m.id)) return
+    seenMsgIds.add(m.id)
     enrich(m)
     room.messages.push(m)
+    conv.setLast(c.conversationId, m.plaintext || '📷 foto')
     // receipt: pesan dari partner -> delivered/read (jika pref on)
     if (m.senderId !== myId.value) {
       conv.bumpUnread(c.conversationId)
@@ -164,15 +170,21 @@ async function onOpen(c) {
       else markDelivered(c.conversationId)
     }
   })
-  // tandai pesan partner sebagai read/delivered pas room dibuka
-  if (prefs.readReceipt) markRead(c.conversationId)
-  else markDelivered(c.conversationId)
+  // tandai pesan partner sebagai read/delivered pas room dibuka (SEKALI)
+  if (!markedReadFor.has(c.conversationId)) {
+    markedReadFor.add(c.conversationId)
+    if (prefs.readReceipt) markRead(c.conversationId)
+    else markDelivered(c.conversationId)
+  }
   // update receipt lokal pesan kita yang dikirim sebelumnya
   if (prefs.readReceipt) refreshReceipts(c.conversationId)
   setupTyping(c.conversationId)
   setupPresence(c.conversationId)
   // decrypt foto yg ada
   for (const m of room.messages) if (m.mediaPath) await preload(m)
+  // update last message di list (decrypted)
+  const last = room.messages[room.messages.length - 1]
+  if (last) conv.setLast(c.conversationId, last.plaintext || '📷 foto')
 }
 function onNewChat(c) { onOpen(c) }
 
@@ -191,6 +203,8 @@ function closeRoom() {
   clearInterval(presenceTimer)
   clearInterval(receiptTimer)
   clearTimeout(typingTimer)
+  markedReadFor.clear()
+  seenMsgIds.clear()
 }
 
 // ---- typing ----
@@ -249,6 +263,7 @@ async function onSend() {
   const replyId = replyingTo.value?.id || null
   replyingTo.value = null
   await sendText(cid, activePartner.value.id, text, replyId)
+  conv.setLast(cid, text)
   room.messages.push(enrich({ id: crypto.randomUUID(), senderId: myId.value, plaintext: text, createdAt: new Date().toISOString(), reply_to: replyId, receipt: 'sent' }))
 }
 
