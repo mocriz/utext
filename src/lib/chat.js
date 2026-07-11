@@ -281,11 +281,13 @@ export function subscribePresence(conversationId, myId, onSync) {
   }
 }
 
-// Download + decrypt foto
+// Download + decrypt foto -> return object URL (siap di <img src>)
 export async function getPhoto(conversationId, partnerId, path, iv) {
   const { data, error } = await supabase.storage.from('media').download(path)
   if (error) throw error
   const bytes = new Uint8Array(await data.arrayBuffer())
   const ss = await sharedSecretWith(partnerId)
-  return await decryptBytes(ss, bytes, iv)
+  const plain = await decryptBytes(ss, bytes, iv)
+  const type = path.endsWith('.png') ? 'image/png' : path.endsWith('.gif') ? 'image/gif' : 'image/jpeg'
+  return URL.createObjectURL(new Blob([plain], { type }))
 }

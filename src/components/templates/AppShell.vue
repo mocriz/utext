@@ -122,6 +122,8 @@ function onNewChat(c) { onOpen(c) }
 // ---- close room -> desktop: clear selection (sidebar tetap); mobile: balik list ----
 function closeRoom() {
   ui.closeRoom()
+  // revoke object URLs biar ga memory leak
+  for (const m of room.messages) if (m.photoUrl?.startsWith('blob:')) URL.revokeObjectURL(m.photoUrl)
   activeConv.value = null
   activePartner.value = null
   room.messages = []
