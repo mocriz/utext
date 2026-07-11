@@ -49,3 +49,65 @@ export async function decryptText(sharedSecretB64, ciphertextB64, nonceB64) {
   )
   return sodium.to_string(pt)
 }
+
+// 5. encrypt binary (foto) — returns base64 ciphertext + nonce
+export async function encryptBytes(sharedSecretB64, bytes) {
+  await initSodium()
+  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)
+  const ct = sodium.crypto_secretbox_easy(bytes, nonce, sodium.from_base64(sharedSecretB64))
+  return { ciphertext: sodium.to_base64(ct), nonce: sodium.to_base64(nonce) }
+}
+
+// 6. decrypt binary (foto)
+export async function decryptBytes(sharedSecretB64, ciphertextB64, nonceB64) {
+  await initSodium()
+  const pt = sodium.crypto_secretbox_open_easy(
+    sodium.from_base64(ciphertextB64),
+    sodium.from_base64(nonceB64),
+    sodium.from_base64(sharedSecretB64)
+  )
+  // Uint8Array ready untuk di-blob + render
+  return pt
+}
+
+// 7. SEAL private key dengan passphrase (biar aman disimpan di Drive)
+//    pakai argon2id (opslimit sedang) + secretbox
+export async function sealPrivateKey(privateKeyB64, passphrase) {
+  await initSodium()
+  const salt = sodium.randombytes_buf(sodium.crypto_pwhash_SALTBYTES)
+  const key = sodium.crypto_pwhash(
+    sodium.crypto_secretbox_KEYBYTES,
+    passphrase,
+    salt,
+    sodium.crypto_pwhash_OPSLIMIT_INTERACTIVE,
+    sodium.crypto_pwhash_MEMLIMIT_INTERACTIVE,
+    sodium.crypto_pwhash_ALG_ARGON2ID13
+  )
+  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES)
+  const sealed = sodium.crypto_secretbox_easy(sodium.from_base64(privateKeyB64), nonce, key)
+  return {
+    v: 1,
+    salt: sodium.to_base64(salt),
+    nonce: sodium.to_base64(nonce),
+    sealed: sodium.to_base64(sealed),
+  }
+}
+
+// 8. UNSEAL private key dari Drive pakai passphrase
+export async function unsealPrivateKey(envelope, passphrase) {
+  await initSodium()
+  const key = sodium.crypto_pwhash(
+    sodium.crypto_secretbox_KEYBYTES,
+    passphrase,
+    sodium.from_base64(envelope.salt),
+    sodium.crypto_pwhash_OPSLIMIT_INTERACTIVE,
+    sodium.crypto_pwhash_MEMLIMIT_INTERACTIVE,
+    sodium.crypto_pwhash_ALG_ARGON2ID13
+  )
+  const priv = sodium.crypto_secretbox_open_easy(
+    sodium.from_base64(envelope.sealed),
+    sodium.from_base64(envelope.nonce),
+    key
+  )
+  return sodium.to_base64(priv)
+}

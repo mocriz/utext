@@ -1,5 +1,21 @@
-# Vue 3 + Vite
+# utext — backendless E2EE chat
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Vue 3 + Vite frontend, Supabase (Postgres + Auth + Realtime + Storage) sebagai BaaS.
+Pesan & foto dienkripsi di browser (libsodium), Supabase hanya menyimpan ciphertext.
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## Setup
+1. Copy `.env.example` → `.env`, isi dari Supabase → Project Settings → API:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_GOOGLE_CLIENT_ID` (Web application OAuth client, scope `drive.file`)
+2. `npm install`
+3. `npm run dev` (localhost)
+
+## Struktur
+- `src/lib/supabase.js` — Supabase client
+- `src/lib/crypto.js` — E2EE (X25519 keypair, ECDH shared secret, AES-GCM via secretbox, seal/unseal private key)
+- `src/lib/driveBackup.js` — backup/restore private key ke Google Drive (drive.file scope)
+
+## Keamanan
+- RLS di semua tabel: user hanya bisa baca/tulis chat di conversation miliknya.
+- Private key tidak pernah keluar browser. Backup ke Drive di-SEAL dengan passphrase (argon2id + secretbox).
