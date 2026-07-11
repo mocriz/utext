@@ -247,14 +247,13 @@ export function subscribeMessages(conversationId, onNew) {
 const pollTimers = new Map()
 
 // --- Typing indicator (Realtime Broadcast, ephemeral, ga ke-DB) ---
-export function subscribeTyping(conversationId, myId) {
+export function subscribeTyping(conversationId, myId, onTyping) {
   const channel = supabase
     .channel('typing:' + conversationId)
     .on('broadcast', { event: 'typing' }, ({ payload }) => {
       if (payload.userId !== myId) onTyping?.(payload.userId)
     })
     .subscribe()
-  function onTyping() {}
   return {
     send: () => channel.send({ type: 'broadcast', event: 'typing', payload: { userId: myId } }),
     unsubscribe: () => supabase.removeChannel(channel),
@@ -266,10 +265,20 @@ export function subscribePresence(conversationId, myId, onSync) {
   const channel = supabase
     .channel('presence:' + conversationId, { config: { presence: { key: myId } } })
     .on('presence', { event: 'sync' }, () => onSync(channel.presenceState()))
+    .on('presence', { event: 'leave' }, () => onSync(channel.presenceState()))
     .subscribe((status) => {
-      if (status === 'SUBSCRIBED') channel.track({ online_at: Date.now() })
+      if (status === 'SUBSCRIBED') {
+        channel.track({ online_at: Date.now() })
+        // heartbeat biar partner tau kita masih online (recency check di client)
+        channel._hb = setInterval(() => {
+          if (channel.state === 'subscribed') channel.track({ online_at: Date.now() })
+        }, 15000)
+      }
     })
-  return () => supabase.removeChannel(channel)
+  return () => {
+    clearInterval(channel._hb)
+    supabase.removeChannel(channel)
+  }
 }
 
 // Download + decrypt foto

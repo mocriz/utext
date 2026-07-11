@@ -92,15 +92,20 @@ async function openConversation(conv) {
   unsub.value = subscribeMessages(conv.conversationId, (m) => messages.value.push(m))
   // typing indicator
   typingUnsub.value?.()
-  const typing = subscribeTyping(conv.conversationId, me.value)
+  const typing = subscribeTyping(conv.conversationId, me.value, () => {
+    isPartnerTyping.value = true
+    clearTimeout(typingTimer)
+    typingTimer = setTimeout(() => { isPartnerTyping.value = false }, 1500)
+  })
   typingUnsub.value = typing
   typingOn = typing.send
-  // presence (online)
+  // presence (online) — recency: partner dianggap online kalau track < 20s lalu
   partnerOnline.value = false
   presenceUnsub.value?.()
   presenceUnsub.value = subscribePresence(conv.conversationId, me.value, (state) => {
     const others = Object.values(state).flat().filter((p) => p.userId !== me.value)
-    partnerOnline.value = others.length > 0
+    const fresh = others.some((p) => Date.now() - (p.online_at || 0) < 20000)
+    partnerOnline.value = fresh
   })
   // simpan last room
   try { localStorage.setItem(LS_ROOM, JSON.stringify({ conversationId: conv.conversationId })) } catch {}
