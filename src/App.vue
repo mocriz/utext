@@ -17,7 +17,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
       ensureIdentity()
         .then((r) => { identityStatus.value = r.status })
         .catch((e) => { identityStatus.value = 'error'; console.warn('ensureIdentity:', e.message) })
-        .finally(() => { initializing.value = false })
+        .finally(() => { initializing.value = false }) // baru tampilkan app setelah identity siap
     }
   } else {
     user.value = null
@@ -26,7 +26,7 @@ supabase.auth.onAuthStateChange((_event, session) => {
   }
 })
 
-setTimeout(() => { initializing.value = false }, 4000)
+setTimeout(() => { initializing.value = false }, 5000)
 </script>
 
 <template>

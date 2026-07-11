@@ -4,6 +4,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import {
   searchUsers, startConversationWith, listConversations, loadMessages,
   sendText, sendPhoto, subscribeMessages, rememberPartner, getPhoto,
+  findExistingConversation,
 } from '../lib/chat'
 import { getSession, getMyProfile, updateUsername, logout, identityStatus, backupToDrive, restoreFromDrive } from '../lib/auth'
 
@@ -70,9 +71,10 @@ async function openConversation(conv) {
 }
 
 async function startChat(user) {
-  const cid = await startConversationWith(user.id)
+  let cid = await findExistingConversation(user.id)
+  if (!cid) cid = await startConversationWith(user.id)
   const conv = { conversationId: cid, partner: user }
-  conversations.value.push(conv)
+  if (!conversations.value.find((c) => c.conversationId === cid)) conversations.value.push(conv)
   searchResults.value = []
   searchQ.value = ''
   await openConversation(conv)

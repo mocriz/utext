@@ -41,8 +41,7 @@ export async function startConversationWith(targetUserId) {
   return data // conversation id
 }
 
-// Ambil list conversation milik user + partner-nya (tanpa embedding PostgREST
-// yang gagal karena FK conversation_members.user_id -> auth.users, bukan profiles)
+// Ambil list conversation milik user + partner-nya (tanpa embedding PostgREST)
 export async function listConversations() {
   const me = getSession().userId
   const { data, error } = await supabase
@@ -50,7 +49,7 @@ export async function listConversations() {
     .select('conversation_id')
     .eq('user_id', me)
   if (error) throw error
-  const convIds = (data || []).map((d) => d.conversation_id)
+  const convIds = [...new Set((data || []).map((d) => d.conversation_id))] // dedupe
   if (!convIds.length) return []
 
   const { data: members, error: e2 } = await supabase
@@ -73,6 +72,23 @@ export async function listConversations() {
     const partnerId = members.find((m) => m.conversation_id === cid && m.user_id !== me)?.user_id
     return { conversationId: cid, partner: profilesMap[partnerId] || { id: partnerId } }
   })
+}
+
+// Cek apa sudah ada conversation 1-on-1 dengan user ini (biar ga dobel)
+export async function findExistingConversation(targetUserId) {
+  const me = getSession().userId
+  const { data } = await supabase
+    .from('conversation_members')
+    .select('conversation_id')
+    .eq('user_id', me)
+  const myConvIds = (data || []).map((d) => d.conversation_id)
+  if (!myConvIds.length) return null
+  const { data: shared } = await supabase
+    .from('conversation_members')
+    .select('conversation_id')
+    .in('conversation_id', myConvIds)
+    .eq('user_id', targetUserId)
+  return shared?.[0]?.conversation_id || null
 }
 
 // Load pesan lama (decrypt semua)
