@@ -7,6 +7,7 @@ export const useUiStore = defineStore('ui', {
     activeRoomId: null,
     settingsOpen: false,
     mobileView: 'list', // list | chat (mobile only)
+    searchOpen: false,
   }),
   actions: {
     openRoom(id) {
@@ -18,5 +19,6 @@ export const useUiStore = defineStore('ui', {
       this.mobileView = 'list'
     },
     toggleSettings(v) { this.settingsOpen = v ?? !this.settingsOpen },
+    toggleSearch(v) { this.searchOpen = v ?? !this.searchOpen },
   },
 })

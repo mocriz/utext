@@ -1,6 +1,7 @@
 <template>
   <aside class="sidebar">
     <SearchBox
+      v-if="ui.searchOpen"
       v-model="q"
       :results="results"
       @search="doSearch"
@@ -25,7 +26,9 @@ import { ref } from 'vue'
 import SearchBox from '../molecules/SearchBox.vue'
 import ChatListItem from '../molecules/ChatListItem.vue'
 import { searchUsers, startConversationWith } from '../../lib/chat'
+import { useUiStore } from '../../stores/ui'
 
+const ui = useUiStore()
 const props = defineProps({
   conversations: { type: Array, default: () => [] },
   activeId: { type: String, default: '' },

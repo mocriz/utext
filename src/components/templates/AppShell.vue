@@ -3,6 +3,7 @@
     <div class="pane-sidebar" :class="{ 'hide-mobile': ui.mobileView === 'chat' }">
       <AppHeader
         :prefs="prefs"
+        @search="ui.toggleSearch()"
         @navigate="onNavigate"
         @logout="onLogout"
       />
@@ -238,9 +239,7 @@ function onCtxSelect(val) {
 // ---- settings / more menu ----
 function onNavigate(target) {
   if (target === 'logout') return onLogout()
-  if (target === 'profile') { settingsSection.value = 'profile'; ui.toggleSettings(true) }
-  else if (target === 'account') { settingsSection.value = 'account'; ui.toggleSettings(true) }
-  else if (target.startsWith('settings')) { settingsSection.value = 'settings'; ui.toggleSettings(true) }
+  if (target === 'settings') { ui.toggleSettings(true) }
 }
 async function onLogout() { await auth.logout(); location.reload() }
 async function onBackup() { await auth.backup(); alert('Key dibackup ke Google Drive.') }
