@@ -1,6 +1,6 @@
 <template>
-  <div class="shell" :class="{ 'mobile-chat': ui.mobileView === 'chat' }">
-    <div class="pane-sidebar" :class="{ hidden: ui.mobileView === 'chat' }">
+  <div class="shell">
+    <div class="pane-sidebar" :class="{ 'hide-mobile': ui.mobileView === 'chat' }">
       <AppHeader
         :prefs="prefs"
         @navigate="onNavigate"
@@ -14,7 +14,7 @@
         @new-chat="onNewChat"
       />
     </div>
-    <div class="pane-chat" :class="{ hidden: ui.mobileView === 'list' }">
+    <div class="pane-chat" :class="{ 'hide-mobile': ui.mobileView === 'list' }">
       <ChatPanel
         v-if="activeConv && activePartner"
         :partner="activePartner"
@@ -105,11 +105,11 @@ async function onOpen(c) {
   activePartner.value = c.partner
   ui.openRoom(c.conversationId)
   conv.clearUnread(c.conversationId)
+  rememberPartner(c.conversationId, c.partner.id) // WAJIB sebelum loadMessages/subscribe
   room.messages = await loadMessages(c.conversationId)
   msgCh?.()
   msgCh = subscribeMessages(c.conversationId, (m) => {
     room.messages.push(m)
-    // unread kalau bukan dari kita & room ga aktif
     if (m.senderId !== myId.value) conv.bumpUnread(c.conversationId)
   })
   setupTyping(c.conversationId)
@@ -119,7 +119,7 @@ async function onOpen(c) {
 }
 function onNewChat(c) { onOpen(c) }
 
-// ---- close room -> balik ke list ----
+// ---- close room -> desktop: clear selection (sidebar tetap); mobile: balik list ----
 function closeRoom() {
   ui.closeRoom()
   activeConv.value = null
@@ -273,11 +273,11 @@ const activePartnerOnline = computed(() => room.partnerOnline)
 .shell { display: flex; height: 100vh; overflow: hidden; }
 .pane-sidebar { width: 340px; flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
 .pane-chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.pane-sidebar.hidden, .pane-chat.hidden { display: none; }
 .empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--muted); gap: 8px; }
 .empty-chat .em { font-size: 48px; }
 @media (max-width: 720px) {
   .pane-sidebar { width: 100%; }
   .pane-chat { width: 100%; }
+  .hide-mobile { display: none; }
 }
 </style>

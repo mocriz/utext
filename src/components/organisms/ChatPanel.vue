@@ -30,6 +30,7 @@ defineProps({
   messages: { type: Array, default: () => [] },
   meId: { type: String, default: '' },
   typing: { type: Boolean, default: false },
+  online: { type: Boolean, default: false },
   draft: { type: String, default: '' },
   preview: { type: Object, default: null },
 })
