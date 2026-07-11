@@ -144,7 +144,7 @@ async function preloadPhoto(m) {
         </li>
       </ul>
     </aside>
-    <main v-if="activeConv">
+    <main v-if="partner">
       <header>@{{ partner?.username || partner?.display_name }}</header>
       <div class="msgs">
         <div v-for="m in messages" :key="m.id" :class="['bubble', m.senderId === me ? 'me' : 'them']">
@@ -152,6 +152,7 @@ async function preloadPhoto(m) {
           <img v-else-if="photoUrls[m.id]" :src="photoUrls[m.id]" class="photo" />
           <span v-else-if="m.mediaPath">📷 loading…</span>
         </div>
+        <div v-if="!activeConv" class="hint">Belum ada pesan — kirim untuk mulai percakapan</div>
       </div>
       <form @submit.prevent="send">
         <input type="file" accept="image/*" ref="photoInput" @change="onPickPhoto" hidden />
@@ -178,6 +179,7 @@ main { flex: 1; display: flex; flex-direction: column; }
 .me { background: #1a73e8; color: #fff; margin-left: auto; }
 .them { background: #eee; }
 .photo { max-width: 200px; border-radius: 8px; }
+.hint { color: #999; font-size: 13px; text-align: center; margin: 12px 0; }
 form { display: flex; padding: 8px; gap: 8px; border-top: 1px solid #ddd; }
 form input:not([type=file]) { flex: 1; padding: 8px; }
 </style>
