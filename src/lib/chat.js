@@ -36,7 +36,9 @@ export async function searchUsers(query) {
 
 // Buat conversation 1-on-1 (RPC)
 export async function startConversationWith(targetUserId) {
-  const { data, error } = await supabase.rpc('create_conversation_with', { target_user_id: targetUserId })
+  const id = typeof targetUserId === 'string' ? targetUserId : targetUserId?.id
+  if (!id) throw new Error('partner id invalid')
+  const { data, error } = await supabase.rpc('create_conversation_with', { target_user_id: id })
   if (error) throw error
   return data // conversation id
 }
