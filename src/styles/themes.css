@@ -1,0 +1,68 @@
+/* src/styles/themes.css — preset palettes via [data-theme] + [data-preset] */
+/* mode: light | dark ; preset: default | midnight | solar | rose | mono */
+
+/* LIGHT defaults */
+[data-theme='light'] {
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --surface-2: #f7f8fa;
+  --fg: #111b21;
+  --muted: #667781;
+  --border: #e9edef;
+  --bubble-me: #d9fdd3;
+  --bubble-them: #ffffff;
+  --bubble-me-fg: #111b21;
+  --bubble-them-fg: #111b21;
+}
+
+/* DARK defaults */
+[data-theme='dark'] {
+  --bg: #0b141a;
+  --surface: #111b21;
+  --surface-2: #182229;
+  --fg: #e9edef;
+  --muted: #8696a0;
+  --border: #2a3942;
+  --bubble-me: #005c4b;
+  --bubble-them: #202c33;
+  --bubble-me-fg: #e9edef;
+  --bubble-them-fg: #e9edef;
+}
+
+/* preset: midnight (dark, biru tua) */
+[data-theme='dark'][data-preset='midnight'] {
+  --accent: #6c8cff;
+  --accent-fg: #ffffff;
+  --bg: #0a0e1a;
+  --surface: #121a2e;
+  --surface-2: #1a2540;
+  --bubble-me: #2d4a8a;
+}
+
+/* preset: solar (light, amber) */
+[data-theme='light'][data-preset='solar'] {
+  --accent: #d97706;
+  --accent-fg: #ffffff;
+  --bg: #fdf6ec;
+  --surface: #fffaf0;
+  --bubble-me: #ffe8b3;
+  --bubble-me-fg: #3a2c00;
+}
+
+/* preset: rose (light, pink) */
+[data-theme='light'][data-preset='rose'] {
+  --accent: #e11d8f;
+  --accent-fg: #ffffff;
+  --bubble-me: #ffd6ec;
+  --bubble-me-fg: #4a0030;
+}
+
+/* preset: mono (dark, grayscale) */
+[data-theme='dark'][data-preset='mono'] {
+  --accent: #9aa0a6;
+  --accent-fg: #111b21;
+  --bubble-me: #3c4043;
+  --bubble-me-fg: #e8eaed;
+}
+
+/* custom theme (user-set) — vars di-inject lewat JS ke :root */

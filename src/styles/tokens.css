@@ -1,0 +1,41 @@
+/* src/styles/tokens.css — design tokens (semantic, di-override oleh theme) */
+:root {
+  /* default fallback (overwritten by themes.css via [data-theme]) */
+  --bg: #f0f2f5;
+  --surface: #ffffff;
+  --surface-2: #f7f8fa;
+  --fg: #111b21;
+  --muted: #667781;
+  --border: #e9edef;
+  --accent: #1a73e8;
+  --accent-fg: #ffffff;
+  --bubble-me: #d9fdd3;
+  --bubble-them: #ffffff;
+  --bubble-me-fg: #111b21;
+  --bubble-them-fg: #111b21;
+  --danger: #e02e2e;
+  --read: #34b7f1;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: inherit; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
