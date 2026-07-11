@@ -117,17 +117,33 @@ async function send() {
 
 async function onPickPhoto(e) {
   const file = e.target.files?.[0]
-  if (!file || !partner.value) return
-  const cid = await ensureConversation()
-  await sendPhoto(cid, partner.value.id, file)
   e.target.value = ''
+  if (!file || !partner.value) return
+  try {
+    const cid = await ensureConversation()
+    await sendPhoto(cid, partner.value.id, file)
+    // optimistically tampilin di sisi pengirim (preload dari Storage)
+    const id = crypto.randomUUID()
+    messages.value.push({ id, senderId: me.value, mediaPath: 'pending', media_iv: null, createdAt: new Date().toISOString() })
+    // realtime/echo akan isi mediaPath asli -> preload ulang
+  } catch (err) {
+    alert('Gagal kirim foto: ' + err.message)
+  }
 }
 
+// preload foto (dipanggil pas loadMessages + pas realtime dapet mediaPath)
 async function preloadPhoto(m) {
-  if (photoUrls.value[m.id]) return
-  const bytes = await getPhoto(activeConv.value, partner.value.id, m.mediaPath, m.media_iv)
-  photoUrls.value[m.id] = URL.createObjectURL(new Blob([bytes]))
+  if (!m.mediaPath || m.mediaPath === 'pending' || photoUrls.value[m.id]) return
+  try {
+    const bytes = await getPhoto(activeConv.value, partner.value.id, m.mediaPath, m.media_iv)
+    photoUrls.value[m.id] = URL.createObjectURL(new Blob([bytes]))
+  } catch (e) { console.warn('preload foto gagal:', e.message) }
 }
+
+// pas realtime echo dapet pesan foto, preload
+watch(messages, (vals) => {
+  for (const m of vals) if (m.mediaPath && m.mediaPath !== 'pending') preloadPhoto(m)
+}, { deep: true })
 </script>
 
 <template>

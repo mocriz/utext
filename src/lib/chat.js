@@ -185,7 +185,15 @@ export function subscribeMessages(conversationId, onNew) {
         try {
           const ss = await sharedSecretWith(partnerOf(conversationId))
           const plaintext = m.ciphertext ? await decryptText(ss, m.ciphertext, m.nonce) : null
-          onNew({ id: m.id, senderId: m.sender_id, plaintext, mediaPath: m.media_path, createdAt: m.created_at })
+          onNew({
+            id: m.id,
+            senderId: m.sender_id,
+            plaintext,
+            mediaPath: m.media_path,
+            media_iv: m.media_iv,
+            media_type: m.media_type,
+            createdAt: m.created_at,
+          })
         } catch (e) {
           console.warn('decrypt gagal:', e.message)
         }
