@@ -1,37 +1,31 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { supabase } from './lib/supabase'
-import { getAuthUser, ensureIdentity } from './lib/auth'
+import { ensureIdentity } from './lib/auth'
 import LoginScreen from './components/LoginScreen.vue'
 
-const ready = ref(false)
 const user = ref(null)
+const initializing = ref(true)
 
-onMounted(async () => {
-  const u = await getAuthUser()
-  if (u) {
-    user.value = u
-    ready.value = true // UI langsung tampil, identity di-load background
-    ensureIdentity().catch((e) => console.warn('ensureIdentity gagal:', e.message))
-  } else {
-    ready.value = true
-  }
-})
-
-supabase.auth.onAuthStateChange(async (_event, session) => {
+// onAuthStateChange FIRING dengan session saat ini (INITIAL_SESSION) ->
+// jadi refresh tidak akan kehilangan session. Ini sumber kebenaran.
+supabase.auth.onAuthStateChange((_event, session) => {
   if (session?.user) {
     user.value = session.user
-    await ensureIdentity()
-    ready.value = true
+    ensureIdentity().catch((e) => console.warn('ensureIdentity gagal:', e.message))
   } else {
     user.value = null
   }
+  initializing.value = false
 })
+
+// Safety net: lepas initializing biar ga stuck Loading
+setTimeout(() => { initializing.value = false }, 3000)
 </script>
 
 <template>
-  <LoginScreen v-if="ready && !user" />
-  <div v-else-if="!ready">Loading…</div>
+  <LoginScreen v-if="!initializing && !user" />
+  <div v-else-if="initializing">Loading…</div>
   <div v-else class="app">
     <header>utext — logged in as {{ user.email }}</header>
     <main>Chat UI coming in Phase 5+</main>

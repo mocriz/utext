@@ -10,6 +10,15 @@ const SCOPE = 'https://www.googleapis.com/auth/drive.file'
 
 let tokenClient = null
 let accessToken = null
+const LS_KEY = 'utext_drive_token'
+
+// restore token dari localStorage (biar consent ga muncul tiap refresh)
+try { accessToken = localStorage.getItem(LS_KEY) || null } catch {}
+
+function cacheToken(t) {
+  accessToken = t
+  try { localStorage.setItem(LS_KEY, t) } catch {}
+}
 
 function ensureTokenClient() {
   if (tokenClient) return tokenClient
@@ -33,7 +42,7 @@ export async function authorizeDrive() {
     tokenClient.callback = (resp) => {
       clearTimeout(timer)
       if (resp.error) return reject(new Error(resp.error))
-      accessToken = resp.access_token
+      cacheToken(resp.access_token)
       resolve(resp.access_token)
     }
     try {
