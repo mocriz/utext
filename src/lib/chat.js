@@ -196,7 +196,7 @@ function sodium_b64_to_bytes(b64) {
 
 // Subscribe realtime pesan baru (Postgres Changes) + fallback polling 3s
 // (biar ga perlu klik nama kalau WS ga connect)
-export function subscribeMessages(conversationId, onNew) {
+export function subscribeMessages(conversationId, onNew, onUpdate) {
   let lastSeen = Date.now()
   let polling = false
 
@@ -225,6 +225,15 @@ export function subscribeMessages(conversationId, onNew) {
         } catch (e) {
           console.warn('decrypt gagal:', e.message)
         }
+      }
+    )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
+      (payload) => {
+        const m = payload.new
+        // pesan dihapus untuk semua -> hide realtime
+        if (m.deleted_for_all) onUpdate?.({ id: m.id, deleted: true })
       }
     )
     .subscribe((status) => {
@@ -296,9 +305,14 @@ export function subscribePresence(conversationId, myId, onSync) {
       if (status === 'SUBSCRIBED') {
         channel.track({ online_at: Date.now() })
         // heartbeat biar partner tau kita masih online (recency check di client)
+        clearInterval(channel._hb)
         channel._hb = setInterval(() => {
           if (channel.state === 'subscribed') channel.track({ online_at: Date.now() })
-        }, 15000)
+        }, 10000)
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        clearInterval(channel._hb)
+        // re-subscribe setelah jeda biar ga putus permanen
+        setTimeout(() => { channel.subscribe() }, 2000)
       }
     })
   return () => {
@@ -330,12 +344,16 @@ export async function deleteConversation(conversationId) {
   if (error) throw error
 }
 
-// Hapus percakapan "untuk semua" (hapus pesan + conversation -> lawan kehilangan semua)
+// Hapus percakapan "untuk semua" (hapus pesan + members + conversation -> lawan kehilangan semua)
 export async function deleteConversationForAll(conversationId) {
-  const { error: e1 } = await supabase.from('messages').delete().eq('conversation_id', conversationId)
-  if (e1) throw e1
-  const { error: e2 } = await supabase.from('conversations').delete().eq('id', conversationId)
-  if (e2) throw e2
+  const { error } = await supabase.rpc('delete_conversation_for_all', { conv_id: conversationId })
+  if (error) throw error
+}
+
+// Soft delete akun (tandai deleted_at)
+export async function softDeleteAccount() {
+  const { error } = await supabase.rpc('soft_delete_account')
+  if (error) throw error
 }
 
 // Hapus pesan "untuk saya" -> append user ke deleted_for[]
