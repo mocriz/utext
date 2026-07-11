@@ -2,12 +2,17 @@
   <div ref="scroller" class="msgs">
     <template v-for="m in messages" :key="m.id">
       <MessageBubble
+        :id="m.id"
         :text="m.plaintext"
         :photo="m.photoUrl"
         :mine="m.senderId === meId"
         :time="m.time"
+        :full-time="m.fullTime"
         :receipt="m.receipt"
+        :edited="m.edited"
+        :reply-to="resolveReply(m)"
         @menu="(e) => $emit('bubble-menu', m, e)"
+        @jump="(id) => $emit('jump', id)"
       />
     </template>
     <TypingIndicator v-if="typing" />
@@ -25,8 +30,21 @@ const props = defineProps({
   meId: { type: String, default: '' },
   typing: { type: Boolean, default: false },
 })
-const emit = defineEmits(['bubble-menu'])
+const emit = defineEmits(['bubble-menu', 'jump'])
 const scroller = ref(null)
+
+// bangun object replyTo utk render quote
+function resolveReply(m) {
+  if (!m.reply_to) return null
+  const orig = props.messages.find((x) => x.id === m.reply_to)
+  if (!orig) return { id: m.reply_to, mine: m.senderId === props.meId, name: '', text: 'pesan telah dihapus' }
+  return {
+    id: orig.id,
+    mine: orig.senderId === props.meId,
+    name: orig.senderId === props.meId ? 'Anda' : (orig._partnerName || ''),
+    text: orig.plaintext || '📷 foto',
+  }
+}
 
 watch(() => props.messages.length, async () => {
   await nextTick()

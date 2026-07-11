@@ -128,7 +128,7 @@ export function rememberPartner(conversationId, partnerId) {
 }
 
 // Kirim pesan text terenkripsi
-export async function sendText(conversationId, partnerId, text) {
+export async function sendText(conversationId, partnerId, text, replyTo = null) {
   const ss = await sharedSecretWith(partnerId)
   const { ciphertext, nonce } = await encryptText(ss, text)
   const { error } = await supabase.from('messages').insert({
@@ -136,7 +136,20 @@ export async function sendText(conversationId, partnerId, text) {
     sender_id: getSession().userId,
     ciphertext,
     nonce,
+    reply_to: replyTo,
   })
+  if (error) throw error
+}
+
+// Edit pesan milik sendiri (maks 10 menit) — re-encrypt + set edited_at
+export async function editMessage(messageId, partnerId, newText) {
+  const ss = await sharedSecretWith(partnerId)
+  const { ciphertext, nonce } = await encryptText(ss, newText)
+  const { error } = await supabase
+    .from('messages')
+    .update({ ciphertext, nonce, edited_at: new Date().toISOString() })
+    .eq('id', messageId)
+    .eq('sender_id', getSession().userId)
   if (error) throw error
 }
 

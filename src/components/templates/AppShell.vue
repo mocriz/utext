@@ -25,14 +25,19 @@
         :online="room.partnerOnline"
         :draft="room.draft"
         :preview="pendingPhoto"
+        :reply-to="replyingTo"
+        :editing="editingMsg"
         @back="closeRoom"
         @bubble-menu="onBubbleMenu"
+        @jump="jumpTo"
         @update:draft="room.draft = $event"
         @typing="onTyping"
         @send="onSend"
         @pick="onPick"
         @confirm-photo="onConfirmPhoto"
         @cancel-photo="onCancelPhoto"
+        @cancel-reply="cancelReply"
+        @cancel-edit="cancelEdit"
       />
       <div v-else class="empty-chat">
         <div class="em">💬</div>
@@ -80,7 +85,7 @@ import ChatPanel from '../organisms/ChatPanel.vue'
 import ContextMenu from '../molecules/ContextMenu.vue'
 import SettingsSheet from '../organisms/SettingsSheet.vue'
 import {
-  loadMessages, sendText, sendPhoto, subscribeMessages,
+  loadMessages, sendText, sendPhoto, subscribeMessages, editMessage,
   subscribeTyping, subscribePresence, rememberPartner, getPhoto, findExistingConversation,
 } from '../../lib/chat'
 import { backupToDrive, restoreFromDrive, updateUsername, getMyProfile } from '../../lib/auth'
@@ -99,6 +104,25 @@ const ctx = reactive({ show: false, items: [], x: 0, y: 0, target: null })
 
 let typingCh = null, presenceCh = null, msgCh = null, typingTimer = null, presenceTimer = null, lastSeen = 0
 const myId = computed(() => auth.user?.id)
+const replyingTo = ref(null)   // { id, mine, name, text }
+const editingMsg = ref(null)   // message object yg lagi diedit
+const EDIT_WINDOW_MS = 10 * 60 * 1000
+
+function fmtTime(d) {
+  const dt = new Date(d)
+  return dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+function fmtFull(d) {
+  const dt = new Date(d)
+  return dt.toLocaleString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+// enrich pesan jadi shape untuk render (time, fullTime, edited, replyTo)
+function enrich(m) {
+  m.time = fmtTime(m.createdAt)
+  m.fullTime = fmtFull(m.createdAt)
+  m.edited = !!m.editedAt
+  return m
+}
 
 // ---- open / switch room ----
 async function onOpen(c) {
@@ -107,9 +131,10 @@ async function onOpen(c) {
   ui.openRoom(c.conversationId)
   conv.clearUnread(c.conversationId)
   rememberPartner(c.conversationId, c.partner.id) // WAJIB sebelum loadMessages/subscribe
-  room.messages = await loadMessages(c.conversationId)
+  room.messages = (await loadMessages(c.conversationId)).map(enrich)
   msgCh?.()
   msgCh = subscribeMessages(c.conversationId, (m) => {
+    enrich(m)
     room.messages.push(m)
     if (m.senderId !== myId.value) conv.bumpUnread(c.conversationId)
   })
@@ -166,11 +191,22 @@ function setupPresence(cid) {
   presenceTimer = setInterval(() => { room.partnerOnline = Date.now() - lastSeen < 20000 }, 5000)
 }
 
-// ---- send ----
+// ---- send (atau simpan edit) ----
 async function onSend() {
   const text = room.draft.trim()
   if (!text || !activeConv.value) return
   room.draft = ''
+
+  // mode EDIT
+  if (editingMsg.value) {
+    const m = editingMsg.value
+    editingMsg.value = null
+    await editMessage(m.id, activePartner.value.id, text)
+    m.plaintext = text
+    m.edited = true
+    return
+  }
+
   // pastikan conversation ada (startConversationWith lazy)
   let cid = activeConv.value
   if (!cid) {
@@ -178,10 +214,11 @@ async function onSend() {
     if (!cid) cid = (await import('../../lib/chat')).startConversationWith(activePartner.value)
     activeConv.value = cid
   }
-  await sendText(cid, activePartner.value.id, text)
-  room.messages.push({ id: crypto.randomUUID(), senderId: myId.value, plaintext: text, time: now(), receipt: 'sent' })
+  const replyId = replyingTo.value?.id || null
+  replyingTo.value = null
+  await sendText(cid, activePartner.value.id, text, replyId)
+  room.messages.push(enrich({ id: crypto.randomUUID(), senderId: myId.value, plaintext: text, createdAt: new Date().toISOString(), reply_to: replyId, receipt: 'sent' }))
 }
-function now() { return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
 
 // ---- photo (preview dulu) ----
 function onPick(e) {
@@ -208,8 +245,12 @@ async function preload(m) {
 
 // ---- context menu (bubble / conv) ----
 function onBubbleMenu(m, e) {
+  const mine = m.senderId === myId.value
+  const canEdit = mine && (Date.now() - new Date(m.createdAt).getTime()) < EDIT_WINDOW_MS && !m.mediaPath
   ctx.target = { type: 'message', m }
   ctx.items = [
+    { label: 'Balas', value: 'reply' },
+    ...(canEdit ? [{ label: 'Edit', value: 'edit' }] : []),
     { label: 'Hapus untuk saya', value: 'delete_me' },
     { label: 'Hapus untuk semua', value: 'delete_all', danger: true },
   ]
@@ -228,12 +269,32 @@ function showCtx(e) {
 function onCtxSelect(val) {
   const t = ctx.target
   if (t?.type === 'message') {
-    if (val === 'delete_me') t.m._hidden = true
-    else if (val === 'delete_all') t.m._deleted = true // TODO Phase F: DB delete
+    if (val === 'reply') startReply(t.m)
+    else if (val === 'edit') startEdit(t.m)
+    else if (val === 'delete_me') t.m._hidden = true
+    else if (val === 'delete_all') t.m._deleted = true // TODO DB delete
   } else if (t?.type === 'conv') {
-    if (val === 'delete_conv') conv.items = conv.items.filter((x) => x.conversationId !== t.c.conversationId) // TODO Phase F: DB
+    if (val === 'delete_conv') conv.items = conv.items.filter((x) => x.conversationId !== t.c.conversationId) // TODO DB
   }
   ctx.show = false
+}
+function startReply(m) {
+  replyingTo.value = {
+    id: m.id,
+    mine: m.senderId === myId.value,
+    name: m.senderId === myId.value ? 'Anda' : (activePartner.value?.username || activePartner.value?.display_name),
+    text: m.plaintext || '📷 foto',
+  }
+}
+function startEdit(m) {
+  editingMsg.value = m
+  room.draft = m.plaintext || ''
+}
+function cancelReply() { replyingTo.value = null }
+function cancelEdit() { editingMsg.value = null; room.draft = '' }
+function jumpTo(id) {
+  const el = document.getElementById('msg-' + id)
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
 // ---- settings / more menu ----
