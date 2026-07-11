@@ -304,3 +304,58 @@ export async function getPhoto(conversationId, partnerId, path, iv) {
   const type = path.endsWith('.png') ? 'image/png' : path.endsWith('.gif') ? 'image/gif' : 'image/jpeg'
   return URL.createObjectURL(new Blob([plain], { type }))
 }
+
+// --- Delete / receipt / profile (Phase H) ---
+
+// Hapus percakapan (hapus membership kita -> hilang dari list kita)
+export async function deleteConversation(conversationId) {
+  const { error } = await supabase
+    .from('conversation_members')
+    .delete()
+    .eq('conversation_id', conversationId)
+    .eq('user_id', getSession().userId)
+  if (error) throw error
+}
+
+// Hapus pesan "untuk saya" -> append user ke deleted_for[]
+export async function deleteMessageForMe(messageId) {
+  const { error } = await supabase.rpc('delete_message_for_me', { msg_id: messageId })
+  if (error) throw error
+}
+
+// Hapus pesan "untuk semua" (hanya sender) -> set deleted_for_all
+export async function deleteMessageForAll(messageId, conversationId) {
+  const { error } = await supabase
+    .from('messages')
+    .update({ deleted_for_all: true })
+    .eq('id', messageId)
+    .eq('conversation_id', conversationId)
+    .eq('sender_id', getSession().userId)
+  if (error) throw error
+}
+
+// Tandai pesan partner sebagai delivered (pas kita subscribe/online)
+export async function markDelivered(conversationId) {
+  await supabase.rpc('mark_delivered', { conversation: conversationId }).catch(() => {})
+}
+
+// Tandai pesan partner sebagai read (pas kita buka room)
+export async function markRead(conversationId) {
+  await supabase.rpc('mark_read', { conversation: conversationId }).catch(() => {})
+}
+
+// Update display name
+export async function updateDisplayName(name) {
+  const { error } = await supabase.rpc('set_display_name', { p_name: name })
+  if (error) throw error
+}
+
+// Upload avatar ke Storage bucket 'avatars', return public URL
+export async function uploadAvatar(file) {
+  const ext = file.name.split('.').pop() || 'jpg'
+  const path = `${getSession().userId}/avatar.${ext}`
+  const { error } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+  if (error) throw error
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+  return data.publicUrl
+}

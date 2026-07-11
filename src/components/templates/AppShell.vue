@@ -79,6 +79,7 @@ import { useUiStore } from '../../stores/ui'
 import { useAuthStore } from '../../stores/auth'
 import { useConversationsStore } from '../../stores/conversations'
 import { usePrefsStore } from '../../stores/prefs'
+import { supabase } from '../../lib/supabase'
 import AppHeader from '../organisms/AppHeader.vue'
 import Sidebar from '../organisms/Sidebar.vue'
 import ChatPanel from '../organisms/ChatPanel.vue'
@@ -87,8 +88,10 @@ import SettingsSheet from '../organisms/SettingsSheet.vue'
 import {
   loadMessages, sendText, sendPhoto, subscribeMessages, editMessage,
   subscribeTyping, subscribePresence, rememberPartner, getPhoto, findExistingConversation,
+  deleteConversation, deleteMessageForMe, deleteMessageForAll, markDelivered, markRead,
+  updateDisplayName, uploadAvatar,
 } from '../../lib/chat'
-import { backupToDrive, restoreFromDrive, updateUsername, getMyProfile } from '../../lib/auth'
+import { backupToDrive, restoreFromDrive, updateUsername, getMyProfile, updateDisplayName, updateAvatar, softDeleteAccount } from '../../lib/auth'
 
 const ui = useUiStore()
 const auth = useAuthStore()
@@ -116,12 +119,23 @@ function fmtFull(d) {
   const dt = new Date(d)
   return dt.toLocaleString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
-// enrich pesan jadi shape untuk render (time, fullTime, edited, replyTo)
-function enrich(m) {
-  m.time = fmtTime(m.createdAt)
-  m.fullTime = fmtFull(m.createdAt)
-  m.edited = !!m.editedAt
-  return m
+// poll status pesan kita (sent->delivered->read) dari DB
+let receiptTimer = null
+async function refreshReceipts(cid) {
+  clearInterval(receiptTimer)
+  receiptTimer = setInterval(async () => {
+    try {
+      const { data } = await supabase
+        .from('messages')
+        .select('id, status')
+        .eq('conversation_id', cid)
+        .eq('sender_id', myId.value)
+      const map = Object.fromEntries((data || []).map((x) => [x.id, x.status]))
+      for (const m of room.messages) {
+        if (m.senderId === myId.value && map[m.id] && m.receipt !== map[m.id]) m.receipt = map[m.id]
+      }
+    } catch {}
+  }, 3000)
 }
 
 // ---- open / switch room ----
@@ -136,8 +150,18 @@ async function onOpen(c) {
   msgCh = subscribeMessages(c.conversationId, (m) => {
     enrich(m)
     room.messages.push(m)
-    if (m.senderId !== myId.value) conv.bumpUnread(c.conversationId)
+    // receipt: pesan dari partner -> delivered/read (jika pref on)
+    if (m.senderId !== myId.value) {
+      conv.bumpUnread(c.conversationId)
+      if (prefs.readReceipt) markRead(c.conversationId)
+      else markDelivered(c.conversationId)
+    }
   })
+  // tandai pesan partner sebagai read/delivered pas room dibuka
+  if (prefs.readReceipt) markRead(c.conversationId)
+  else markDelivered(c.conversationId)
+  // update receipt lokal pesan kita yang dikirim sebelumnya
+  if (prefs.readReceipt) refreshReceipts(c.conversationId)
   setupTyping(c.conversationId)
   setupPresence(c.conversationId)
   // decrypt foto yg ada
@@ -158,6 +182,7 @@ function closeRoom() {
   typingCh?.(); typingCh = null
   presenceCh?.(); presenceCh = null
   clearInterval(presenceTimer)
+  clearInterval(receiptTimer)
   clearTimeout(typingTimer)
 }
 
@@ -269,12 +294,20 @@ function showCtx(e) {
 function onCtxSelect(val) {
   const t = ctx.target
   if (t?.type === 'message') {
-    if (val === 'reply') startReply(t.m)
-    else if (val === 'edit') startEdit(t.m)
-    else if (val === 'delete_me') t.m._hidden = true
-    else if (val === 'delete_all') t.m._deleted = true // TODO DB delete
+    const m = t.m
+    if (val === 'reply') startReply(m)
+    else if (val === 'edit') startEdit(m)
+    else if (val === 'delete_me') { m._hidden = true; deleteMessageForMe(m.id).catch(() => {}) }
+    else if (val === 'delete_all') {
+      m._deleted = true
+      deleteMessageForAll(m.id, activeConv.value).catch(() => {})
+    }
   } else if (t?.type === 'conv') {
-    if (val === 'delete_conv') conv.items = conv.items.filter((x) => x.conversationId !== t.c.conversationId) // TODO DB
+    if (val === 'delete_conv') {
+      deleteConversation(t.c.conversationId).catch(() => {})
+      conv.items = conv.items.filter((x) => x.conversationId !== t.c.conversationId)
+      if (activeConv.value === t.c.conversationId) closeRoom()
+    }
   }
   ctx.show = false
 }
@@ -306,9 +339,15 @@ async function onLogout() { await auth.logout(); location.reload() }
 async function onBackup() { await auth.backup(); alert('Key dibackup ke Google Drive.') }
 async function onRestore() { await auth.restore() }
 async function onSaveUsername(name) { await auth.editUsername(name); await refreshProfile() }
-async function onSaveDisplay(name) { /* TODO Phase F: update display_name */ await refreshProfile() }
-async function onAvatar(file) { /* TODO Phase F: upload avatar */ }
-async function onDeleteAccount() { /* TODO Phase F: soft delete */ alert('Fitur hapus akun menyusul (Phase F).') }
+async function onSaveDisplay(name) { await updateDisplayName(name); await refreshProfile() }
+async function onAvatar(file) { await updateAvatar(file); await refreshProfile() }
+async function onDeleteAccount() {
+  if (confirm('Hapus akun? Chat lawan tetap bisa dibaca. Login Gmail sama bisa kembali.')) {
+    await softDeleteAccount()
+    await auth.logout()
+    location.reload()
+  }
+}
 async function refreshProfile() { auth.profile = await getMyProfile() }
 
 // visible messages (filter deleted/hidden)

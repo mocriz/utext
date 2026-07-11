@@ -116,6 +116,27 @@ export async function updateUsername(username) {
   return true
 }
 
+export async function updateDisplayName(name) {
+  const { updateDisplayName: rpc } = await import('./chat')
+  await rpc(name)
+}
+
+export async function updateAvatar(file) {
+  const { uploadAvatar } = await import('./chat')
+  const url = await uploadAvatar(file)
+  const user = await getAuthUser()
+  if (!user) throw new Error('belum login')
+  const { error } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', user.id)
+  if (error) throw error
+  return url
+}
+
+// Soft delete akun: tandai deleted_at (chat lawan tetap bisa dibaca), auth user TIDAK dihapus
+export async function softDeleteAccount() {
+  const { soft_delete_account } = await import('./chat')
+  await soft_delete_account()
+}
+
 export async function logout() {
   clearKey()
   session = { userId: null, privateKey: null, publicKey: null }
