@@ -205,7 +205,7 @@ async function saveUsername() {
 }
 async function saveDisplay() { saving.value = true; await emit('save-display', displayDraft.value.trim()); saving.value = false }
 function onAvatar(e) { const f = e.target.files?.[0]; if (f) { avatarName.value = f.name; emit('avatar', f) } }
-function confirmDelete() { if (confirm('Hapus akun? Chat lawan tetap bisa dibaca. Login Gmail sama bisa kembali.')) emit('delete-account') }
+function confirmDelete() { emit('delete-account') }
 </script>
 
 <style scoped>

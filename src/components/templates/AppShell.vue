@@ -78,6 +78,8 @@
       @delete-account="onDeleteAccount"
       @update:prefs="prefs.set"
     />
+
+    <ConfirmDialog ref="confirmDialog" />
   </div>
 </template>
 
@@ -94,10 +96,11 @@ import Sidebar from '../organisms/Sidebar.vue'
 import ChatPanel from '../organisms/ChatPanel.vue'
 import ContextMenu from '../molecules/ContextMenu.vue'
 import SettingsSheet from '../organisms/SettingsSheet.vue'
+import ConfirmDialog from '../atoms/ConfirmDialog.vue'
 import {
   loadMessages, sendText, sendPhoto, subscribeMessages, editMessage,
   subscribeTyping, subscribePresence, rememberPartner, getPhoto, findExistingConversation,
-  deleteConversation, deleteMessageForMe, deleteMessageForAll, markDelivered, markRead,
+  deleteConversation, deleteMessageForMe, deleteMessageForAll, deleteConversationForAll, markDelivered, markRead,
   updateDisplayName as rpcUpdateDisplayName, uploadAvatar, searchUsers, startConversationWith,
 } from '../../lib/chat'
 import { backupToDrive, restoreFromDrive, updateUsername, getMyProfile, updateDisplayName, updateAvatar, softDeleteAccount } from '../../lib/auth'
@@ -114,6 +117,7 @@ const activePartner = ref(null)
 const pendingPhoto = ref(null)
 const settingsSection = ref('profile')
 const chatPanel = ref(null)
+const confirmDialog = ref(null)
 const ctx = reactive({ show: false, items: [], x: 0, y: 0, target: null })
 
 // fokus ke field text (dipakai pas buka room, balas, edit, & keyboard fisik)
@@ -334,17 +338,29 @@ function onBubbleMenu(m, e) {
   const mine = m.senderId === myId.value
   const canEdit = mine && (Date.now() - new Date(m.createdAt).getTime()) < EDIT_WINDOW_MS && !m.mediaPath
   ctx.target = { type: 'message', m }
-  ctx.items = [
-    { label: 'Balas', value: 'reply' },
-    ...(canEdit ? [{ label: 'Edit', value: 'edit' }] : []),
-    { label: 'Hapus untuk saya', value: 'delete_me' },
-    { label: 'Hapus untuk semua', value: 'delete_all', danger: true },
-  ]
+  if (mine) {
+    // pesan sendiri: bisa hapus untuk semua
+    ctx.items = [
+      { label: 'Balas', value: 'reply' },
+      ...(canEdit ? [{ label: 'Edit', value: 'edit' }] : []),
+      { label: 'Hapus untuk saya', value: 'delete_me' },
+      { label: 'Hapus untuk semua', value: 'delete_all', danger: true },
+    ]
+  } else {
+    // pesan lawan: cuma bisa hapus untuk saya
+    ctx.items = [
+      { label: 'Balas', value: 'reply' },
+      { label: 'Hapus untuk saya', value: 'delete_me' },
+    ]
+  }
   showCtx(e)
 }
 function onConvMenu(c, e) {
   ctx.target = { type: 'conv', c }
-  ctx.items = [{ label: 'Hapus percakapan', value: 'delete_conv', danger: true }]
+  ctx.items = [
+    { label: 'Hapus untuk saya', value: 'delete_conv_me' },
+    { label: 'Hapus untuk semua', value: 'delete_conv_all', danger: true },
+  ]
   showCtx(e)
 }
 function showCtx(e) {
@@ -369,13 +385,27 @@ async function onCtxSelect(val) {
       catch (e) { toast.error('Gagal hapus: ' + e.message) }
     }
   } else if (t?.type === 'conv') {
-    if (val === 'delete_conv') {
+    if (val === 'delete_conv_me') {
       try {
         await deleteConversation(t.c.conversationId)
         conv.items = conv.items.filter((x) => x.conversationId !== t.c.conversationId)
         if (activeConv.value === t.c.conversationId) closeRoom()
-        toast.success('Percakapan dihapus')
-      } catch (e) { toast.error('Gagal hapus percakapan: ' + e.message) }
+        toast.success('Percakapan dihapus untuk Anda')
+      } catch (e) { toast.error('Gagal hapus: ' + e.message) }
+    } else if (val === 'delete_conv_all') {
+      const ok = await confirmDialog.value.open({
+        title: 'Hapus untuk semua?',
+        message: 'Percakapan dan semua pesan akan dihapus permanen. Lawan kehilangan semua chat ini.',
+        confirmText: 'Hapus semua',
+        danger: true,
+      })
+      if (!ok) return
+      try {
+        await deleteConversationForAll(t.c.conversationId)
+        conv.items = conv.items.filter((x) => x.conversationId !== t.c.conversationId)
+        if (activeConv.value === t.c.conversationId) closeRoom()
+        toast.success('Percakapan dihapus untuk semua')
+      } catch (e) { toast.error('Gagal hapus: ' + e.message) }
     }
   }
   ctx.show = false
@@ -428,13 +458,18 @@ async function onAvatar(file) {
   catch (e) { toast.error('Gagal upload: ' + e.message) }
 }
 async function onDeleteAccount() {
-  if (confirm('Hapus akun? Chat lawan tetap bisa dibaca. Login Gmail sama bisa kembali.')) {
-    try {
-      await softDeleteAccount()
-      await auth.logout()
-      location.reload()
-    } catch (e) { toast.error('Gagal hapus akun: ' + e.message) }
-  }
+  const ok = await confirmDialog.value.open({
+    title: 'Hapus akun?',
+    message: 'Chat lawan tetap bisa dibaca. Login Gmail sama bisa kembali.',
+    confirmText: 'Hapus akun',
+    danger: true,
+  })
+  if (!ok) return
+  try {
+    await softDeleteAccount()
+    await auth.logout()
+    location.reload()
+  } catch (e) { toast.error('Gagal hapus akun: ' + e.message) }
 }
 async function refreshProfile() { auth.profile = await getMyProfile() }
 
