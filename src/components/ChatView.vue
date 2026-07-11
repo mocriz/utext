@@ -60,6 +60,10 @@ async function doSearch() {
 }
 
 async function openConversation(conv) {
+  if (!getSession().privateKey) {
+    alert('Kunci belum siap. Klik "Restore Drive" dulu (atau tunggu sebentar).')
+    if (identityStatus.value === 'need_restore') return
+  }
   activeConv.value = conv.conversationId
   partner.value = conv.partner
   rememberPartner(conv.conversationId, conv.partner.id)
