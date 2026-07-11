@@ -23,6 +23,7 @@ const editing = ref(false)
 const newUsername = ref('')
 const photoUrls = ref({})
 const backupMsg = ref('')
+const pendingPhoto = ref(null) // { file, url } — preview sebelum kirim
 const LS_ROOM = 'utext_last_room'
 
 watch(me, (v) => { me.value = v })
@@ -115,20 +116,33 @@ async function send() {
   messages.value.push({ id: crypto.randomUUID(), senderId: me.value, plaintext: text, createdAt: new Date().toISOString() })
 }
 
-async function onPickPhoto(e) {
+// Pilih foto -> HANYA preview, BELUM kirim
+function onPickPhoto(e) {
   const file = e.target.files?.[0]
   e.target.value = ''
   if (!file || !partner.value) return
+  // bersihkan preview lama
+  if (pendingPhoto.value?.url) URL.revokeObjectURL(pendingPhoto.value.url)
+  pendingPhoto.value = { file, url: URL.createObjectURL(file) }
+}
+
+// Konfirmasi kirim foto (user klik "Kirim")
+async function confirmPhoto() {
+  if (!pendingPhoto.value) return
+  const file = pendingPhoto.value.file
+  pendingPhoto.value = null
   try {
     const cid = await ensureConversation()
     await sendPhoto(cid, partner.value.id, file)
-    // optimistically tampilin di sisi pengirim (preload dari Storage)
-    const id = crypto.randomUUID()
-    messages.value.push({ id, senderId: me.value, mediaPath: 'pending', media_iv: null, createdAt: new Date().toISOString() })
-    // realtime/echo akan isi mediaPath asli -> preload ulang
   } catch (err) {
     alert('Gagal kirim foto: ' + err.message)
   }
+}
+
+// Batal kirim foto
+function cancelPhoto() {
+  if (pendingPhoto.value?.url) URL.revokeObjectURL(pendingPhoto.value.url)
+  pendingPhoto.value = null
 }
 
 // preload foto (dipanggil pas loadMessages + pas realtime dapet mediaPath)
@@ -187,6 +201,13 @@ watch(messages, (vals) => {
         <input v-model="draft" placeholder="Type…" />
         <button type="submit">Send</button>
       </form>
+      <div v-if="pendingPhoto" class="photo-confirm">
+        <img :src="pendingPhoto.url" class="preview" />
+        <div class="photo-actions">
+          <button type="button" @click="confirmPhoto">Kirim</button>
+          <button type="button" @click="cancelPhoto">Batal</button>
+        </div>
+      </div>
     </main>
     <main v-else class="empty">Pilih atau cari user untuk mulai chat</main>
   </div>
@@ -209,4 +230,7 @@ main { flex: 1; display: flex; flex-direction: column; }
 .hint { color: #999; font-size: 13px; text-align: center; margin: 12px 0; }
 form { display: flex; padding: 8px; gap: 8px; border-top: 1px solid #ddd; }
 form input:not([type=file]) { flex: 1; padding: 8px; }
+.photo-confirm { padding: 8px; border-top: 1px solid #ddd; display: flex; gap: 12px; align-items: center; }
+.photo-confirm .preview { max-width: 120px; max-height: 120px; border-radius: 8px; }
+.photo-actions { display: flex; flex-direction: column; gap: 6px; }
 </style>
