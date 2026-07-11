@@ -146,8 +146,8 @@ export async function updateAvatar(file) {
 
 // Soft delete akun: tandai deleted_at (chat lawan tetap bisa dibaca), auth user TIDAK dihapus
 export async function softDeleteAccount() {
-  const { soft_delete_account } = await import('./chat')
-  await soft_delete_account()
+  const { softDeleteAccount: rpc } = await import('./chat')
+  await rpc()
 }
 
 export async function logout() {

@@ -192,6 +192,10 @@ async function onOpen(c) {
       if (prefs.readReceipt) markRead(c.conversationId)
       else markDelivered(c.conversationId)
     }
+  }, (u) => {
+    // pesan dihapus untuk semua -> hide realtime (tanpa refresh)
+    const existing = room.messages.find((x) => x.id === u.id)
+    if (existing) existing._deleted = true
   })
   // tandai pesan partner sebagai read/delivered pas room dibuka (SEKALI)
   if (!markedReadFor.has(c.conversationId)) {
@@ -271,13 +275,15 @@ function onTyping() {
 // ---- presence ----
 function setupPresence(cid) {
   presenceCh?.()
+  lastSeen = 0
   presenceCh = subscribePresence(cid, myId.value, (state) => {
     const others = Object.values(state).flat().filter((p) => p.userId !== myId.value)
-    lastSeen = Math.max(0, ...others.map((p) => p.online_at || 0))
-    room.partnerOnline = Date.now() - lastSeen < 20000
+    const max = Math.max(0, ...others.map((p) => p.online_at || 0))
+    lastSeen = max
+    room.partnerOnline = Date.now() - lastSeen < 30000
   })
   clearInterval(presenceTimer)
-  presenceTimer = setInterval(() => { room.partnerOnline = Date.now() - lastSeen < 20000 }, 5000)
+  presenceTimer = setInterval(() => { room.partnerOnline = Date.now() - lastSeen < 30000 }, 4000)
 }
 
 // ---- send (atau simpan edit) ----
