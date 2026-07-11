@@ -3,11 +3,12 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import {
   searchUsers, startConversationWith, listConversations, loadMessages,
-  sendText, subscribeMessages, rememberPartner, getPhoto,
+  sendText, sendPhoto, subscribeMessages, rememberPartner, getPhoto,
 } from '../lib/chat'
-import { getSession } from '../lib/auth'
+import { getSession, getMyProfile, updateUsername, logout } from '../lib/auth'
 
 const me = getSession().userId
+const myUsername = ref('')
 const conversations = ref([])
 const activeConv = ref(null)
 const messages = ref([])
@@ -16,12 +17,25 @@ const draft = ref('')
 const searchQ = ref('')
 const searchResults = ref([])
 const unsub = ref(null)
+const photoInput = ref(null)
+const editing = ref(false)
+const newUsername = ref('')
 
 onMounted(async () => {
+  const p = await getMyProfile()
+  myUsername.value = p?.username || ''
   conversations.value = await listConversations()
 })
 
 onUnmounted(() => unsub.value?.())
+
+async function saveUsername() {
+  try {
+    await updateUsername(newUsername.value.trim())
+    myUsername.value = newUsername.value.trim()
+    editing.value = false
+  } catch (e) { alert('Gagal: ' + e.message) }
+}
 
 async function doSearch() {
   if (searchQ.value.length < 2) return
@@ -51,11 +65,17 @@ async function send() {
   const text = draft.value
   draft.value = ''
   await sendText(activeConv.value, partner.value.id, text)
-  // realtime akan nambahin; tapi optimistik push juga
   messages.value.push({ id: crypto.randomUUID(), senderId: me, plaintext: text, createdAt: new Date().toISOString() })
 }
 
-async function renderPhoto(m) {
+async function onPickPhoto(e) {
+  const file = e.target.files?.[0]
+  if (!file || !activeConv.value) return
+  await sendPhoto(activeConv.value, partner.value.id, file)
+  e.target.value = ''
+}
+
+async function photoUrl(m) {
   if (!m.mediaPath) return null
   const bytes = await getPhoto(activeConv.value, partner.value.id, m.mediaPath, m.media_iv)
   return URL.createObjectURL(new Blob([bytes]))
@@ -65,6 +85,13 @@ async function renderPhoto(m) {
 <template>
   <div class="chat">
     <aside>
+      <div class="me-box">
+        <span v-if="!editing">@{{ myUsername }}</span>
+        <input v-else v-model="newUsername" @keyup.enter="saveUsername" placeholder="new username" />
+        <button v-if="!editing" @click="editing = true; newUsername = myUsername">edit</button>
+        <button v-else @click="saveUsername">save</button>
+        <button @click="logout">logout</button>
+      </div>
       <input v-model="searchQ" @input="doSearch" placeholder="Search username…" />
       <ul v-if="searchResults.length" class="search">
         <li v-for="u in searchResults" :key="u.id" @click="startChat(u)">
@@ -78,16 +105,18 @@ async function renderPhoto(m) {
       </ul>
     </aside>
     <main v-if="activeConv">
-      <header>{{ partner?.username || partner?.display_name }}</header>
+      <header>@{{ partner?.username || partner?.display_name }}</header>
       <div class="msgs">
         <div v-for="m in messages" :key="m.id" :class="['bubble', m.senderId === me ? 'me' : 'them']">
           <template v-if="m.plaintext">{{ m.plaintext }}</template>
-          <img v-else-if="m.mediaPath" :src="renderPhoto(m)" class="photo" />
+          <img v-else-if="m.mediaPath" :src="photoUrl(m)" class="photo" />
         </div>
       </div>
       <form @submit.prevent="send">
+        <input type="file" accept="image/*" ref="photoInput" @change="onPickPhoto" hidden />
+        <button type="button" @click="photoInput?.click()">📷</button>
         <input v-model="draft" placeholder="Type…" />
-        <button>Send</button>
+        <button type="submit">Send</button>
       </form>
     </main>
     <main v-else class="empty">Pilih atau cari user untuk mulai chat</main>
@@ -97,6 +126,7 @@ async function renderPhoto(m) {
 <style scoped>
 .chat { display: flex; height: 100vh; font-family: sans-serif; }
 aside { width: 280px; border-right: 1px solid #ddd; padding: 8px; overflow-y: auto; }
+.me-box { display: flex; gap: 4px; align-items: center; padding: 6px; background: #f7f7f7; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
 .convs, .search { list-style: none; padding: 0; margin: 8px 0; }
 .convs li, .search li { padding: 8px; cursor: pointer; border-radius: 6px; }
 .convs li:hover, .search li:hover { background: #f0f0f0; }
@@ -108,5 +138,5 @@ main { flex: 1; display: flex; flex-direction: column; }
 .them { background: #eee; }
 .photo { max-width: 200px; border-radius: 8px; }
 form { display: flex; padding: 8px; gap: 8px; border-top: 1px solid #ddd; }
-form input { flex: 1; padding: 8px; }
+form input[type=text], form input:not([type=file]):not([type=button]) { flex: 1; padding: 8px; }
 </style>

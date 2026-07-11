@@ -94,8 +94,19 @@ async function generateUniqueUsername() {
   throw new Error('gagal generate username unik')
 }
 
-// Logout
-export async function logout() {
-  session = { userId: null, privateKey: null, publicKey: null }
-  await supabase.auth.signOut()
+// Ambil profil sendiri (username + display)
+export async function getMyProfile() {
+  const user = await getAuthUser()
+  if (!user) return null
+  const { data } = await supabase.from('profiles').select('username, display_name, avatar_url').eq('id', user.id).single()
+  return data
+}
+
+// Update username (validasi di DB: [a-z0-9_] 1..30)
+export async function updateUsername(username) {
+  const user = await getAuthUser()
+  if (!user) throw new Error('belum login')
+  const { error } = await supabase.from('profiles').update({ username }).eq('id', user.id)
+  if (error) throw error
+  return true
 }
