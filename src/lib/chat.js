@@ -131,13 +131,14 @@ export function rememberPartner(conversationId, partnerId) {
 export async function sendText(conversationId, partnerId, text, replyTo = null) {
   const ss = await sharedSecretWith(partnerId)
   const { ciphertext, nonce } = await encryptText(ss, text)
-  const { error } = await supabase.from('messages').insert({
+  const insertObj = {
     conversation_id: conversationId,
     sender_id: getSession().userId,
     ciphertext,
     nonce,
-    reply_to: replyTo,
-  })
+  }
+  if (replyTo) insertObj.reply_to = replyTo
+  const { error } = await supabase.from('messages').insert(insertObj)
   if (error) throw error
 }
 
@@ -336,12 +337,12 @@ export async function deleteMessageForAll(messageId, conversationId) {
 
 // Tandai pesan partner sebagai delivered (pas kita subscribe/online)
 export async function markDelivered(conversationId) {
-  await supabase.rpc('mark_delivered', { conversation: conversationId }).catch(() => {})
+  try { await supabase.rpc('mark_delivered', { conversation: conversationId }) } catch {}
 }
 
 // Tandai pesan partner sebagai read (pas kita buka room)
 export async function markRead(conversationId) {
-  await supabase.rpc('mark_read', { conversation: conversationId }).catch(() => {})
+  try { await supabase.rpc('mark_read', { conversation: conversationId }) } catch {}
 }
 
 // Update display name
