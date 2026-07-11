@@ -23,6 +23,7 @@ const editing = ref(false)
 const newUsername = ref('')
 const photoUrls = ref({})
 const backupMsg = ref('')
+const LS_ROOM = 'utext_last_room'
 
 watch(me, (v) => { me.value = v })
 
@@ -30,6 +31,14 @@ onMounted(async () => {
   const p = await getMyProfile()
   myUsername.value = p?.username || ''
   conversations.value = await listConversations()
+  // restore last room dari localStorage
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS_ROOM) || 'null')
+    if (saved?.conversationId) {
+      const conv = conversations.value.find((c) => c.conversationId === saved.conversationId)
+      if (conv) await openConversation(conv)
+    }
+  } catch {}
 })
 
 onUnmounted(() => { unsub.value?.(); Object.values(photoUrls.value).forEach(URL.revokeObjectURL) })
@@ -70,6 +79,8 @@ async function openConversation(conv) {
   messages.value = await loadMessages(conv.conversationId)
   unsub.value?.()
   unsub.value = subscribeMessages(conv.conversationId, (m) => messages.value.push(m))
+  // simpan last room
+  try { localStorage.setItem(LS_ROOM, JSON.stringify({ conversationId: conv.conversationId })) } catch {}
   // preload foto
   for (const m of messages.value) if (m.mediaPath) await preloadPhoto(m)
 }
