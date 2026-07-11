@@ -87,6 +87,7 @@ import { useUiStore } from '../../stores/ui'
 import { useAuthStore } from '../../stores/auth'
 import { useConversationsStore } from '../../stores/conversations'
 import { usePrefsStore } from '../../stores/prefs'
+import { useToastStore } from '../../stores/toast'
 import { supabase } from '../../lib/supabase'
 import AppHeader from '../organisms/AppHeader.vue'
 import Sidebar from '../organisms/Sidebar.vue'
@@ -105,6 +106,7 @@ const ui = useUiStore()
 const auth = useAuthStore()
 const conv = useConversationsStore()
 const prefs = usePrefsStore()
+const toast = useToastStore()
 
 const room = reactive({ messages: [], draft: '', typing: false, partnerOnline: false })
 const activeConv = ref(null)
@@ -213,7 +215,7 @@ function onSearchInput(q) {
   searchQuery.value = q
   clearTimeout(searchTimer)
   searchTimer = setTimeout(async () => {
-    if (q.length < 2) return (searchResults.value = [])
+    if (q.length < 1) return (searchResults.value = [])
     searchResults.value = await searchUsers(q)
   }, 250)
 }
@@ -350,22 +352,30 @@ function showCtx(e) {
   ctx.y = e?.clientY || (e?.touch ? window.innerHeight / 2 : 0)
   ctx.show = true
 }
-function onCtxSelect(val) {
+async function onCtxSelect(val) {
   const t = ctx.target
   if (t?.type === 'message') {
     const m = t.m
     if (val === 'reply') startReply(m)
     else if (val === 'edit') startEdit(m)
-    else if (val === 'delete_me') { m._hidden = true; deleteMessageForMe(m.id).catch(() => {}) }
+    else if (val === 'delete_me') {
+      m._hidden = true
+      try { await deleteMessageForMe(m.id); toast.success('Pesan dihapus untuk Anda') }
+      catch (e) { toast.error('Gagal hapus: ' + e.message) }
+    }
     else if (val === 'delete_all') {
       m._deleted = true
-      deleteMessageForAll(m.id, activeConv.value).catch(() => {})
+      try { await deleteMessageForAll(m.id, activeConv.value); toast.success('Pesan dihapus untuk semua') }
+      catch (e) { toast.error('Gagal hapus: ' + e.message) }
     }
   } else if (t?.type === 'conv') {
     if (val === 'delete_conv') {
-      deleteConversation(t.c.conversationId).catch(() => {})
-      conv.items = conv.items.filter((x) => x.conversationId !== t.c.conversationId)
-      if (activeConv.value === t.c.conversationId) closeRoom()
+      try {
+        await deleteConversation(t.c.conversationId)
+        conv.items = conv.items.filter((x) => x.conversationId !== t.c.conversationId)
+        if (activeConv.value === t.c.conversationId) closeRoom()
+        toast.success('Percakapan dihapus')
+      } catch (e) { toast.error('Gagal hapus percakapan: ' + e.message) }
     }
   }
   ctx.show = false
@@ -397,16 +407,33 @@ function onNavigate(target) {
   if (target === 'settings') { ui.toggleSettings(true) }
 }
 async function onLogout() { await auth.logout(); location.reload() }
-async function onBackup() { await auth.backup(); alert('Key dibackup ke Google Drive.') }
-async function onRestore() { await auth.restore() }
-async function onSaveUsername(name) { await auth.editUsername(name); await refreshProfile() }
-async function onSaveDisplay(name) { await rpcUpdateDisplayName(name); await refreshProfile() }
-async function onAvatar(file) { await updateAvatar(file); await refreshProfile() }
+async function onBackup() {
+  try { await auth.backup(); toast.success('Key dibackup ke Google Drive') }
+  catch (e) { toast.error('Backup gagal: ' + e.message) }
+}
+async function onRestore() {
+  try { await auth.restore(); toast.success('Key dipulihkan dari Drive') }
+  catch (e) { toast.error('Restore gagal: ' + e.message) }
+}
+async function onSaveUsername(name) {
+  try { await auth.editUsername(name); await refreshProfile(); toast.success('Username disimpan') }
+  catch (e) { toast.error('Gagal: ' + e.message) }
+}
+async function onSaveDisplay(name) {
+  try { await rpcUpdateDisplayName(name); await refreshProfile(); toast.success('Nama tampilan disimpan') }
+  catch (e) { toast.error('Gagal: ' + e.message) }
+}
+async function onAvatar(file) {
+  try { await updateAvatar(file); await refreshProfile(); toast.success('Foto profil diperbarui') }
+  catch (e) { toast.error('Gagal upload: ' + e.message) }
+}
 async function onDeleteAccount() {
   if (confirm('Hapus akun? Chat lawan tetap bisa dibaca. Login Gmail sama bisa kembali.')) {
-    await softDeleteAccount()
-    await auth.logout()
-    location.reload()
+    try {
+      await softDeleteAccount()
+      await auth.logout()
+      location.reload()
+    } catch (e) { toast.error('Gagal hapus akun: ' + e.message) }
   }
 }
 async function refreshProfile() { auth.profile = await getMyProfile() }

@@ -116,6 +116,19 @@ export async function updateUsername(username) {
   return true
 }
 
+// Cek username masih available (belum dipakai user lain)
+export async function isUsernameAvailable(username) {
+  const user = await getAuthUser()
+  if (!user) return false
+  const { data } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', username)
+    .neq('id', user.id)
+    .maybeSingle()
+  return !data
+}
+
 export async function updateDisplayName(name) {
   const { updateDisplayName: rpc } = await import('./chat')
   await rpc(name)

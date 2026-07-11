@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useAuthStore } from './stores/auth'
 import LoginScreen from './components/LoginScreen.vue'
 import AppShell from './components/templates/AppShell.vue'
+import ToastHost from './components/atoms/ToastHost.vue'
 
 const auth = useAuthStore()
 const showApp = computed(() => auth.isReady && auth.isAuthed && auth.identityStatus !== 'need_restore')
@@ -20,6 +21,7 @@ const showApp = computed(() => auth.isReady && auth.isAuthed && auth.identitySta
     <button @click="auth.restore()">Restore dari Drive</button>
     <button @click="auth.backup()" v-if="auth.identityStatus === 'new'">Backup Key Baru</button>
   </div>
+  <ToastHost />
 </template>
 
 <style>
