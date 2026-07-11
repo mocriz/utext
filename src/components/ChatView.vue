@@ -4,7 +4,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue'
 import {
   searchUsers, startConversationWith, listConversations, loadMessages,
   sendText, sendPhoto, subscribeMessages, rememberPartner, getPhoto,
-  findExistingConversation,
+  findExistingConversation, subscribeTyping, subscribePresence,
 } from '../lib/chat'
 import { getSession, getMyProfile, updateUsername, logout, identityStatus, backupToDrive, restoreFromDrive } from '../lib/auth'
 
@@ -25,6 +25,11 @@ const photoUrls = ref({})
 const backupMsg = ref('')
 const pendingPhoto = ref(null) // { file, url } — preview sebelum kirim
 const LS_ROOM = 'utext_last_room'
+const typingUnsub = ref(null)
+const presenceUnsub = ref(null)
+const isPartnerTyping = ref(false)
+const partnerOnline = ref(false)
+let typingTimer = null
 
 watch(me, (v) => { me.value = v })
 
@@ -42,7 +47,12 @@ onMounted(async () => {
   } catch {}
 })
 
-onUnmounted(() => { unsub.value?.(); Object.values(photoUrls.value).forEach(URL.revokeObjectURL) })
+onUnmounted(() => {
+  unsub.value?.()
+  typingUnsub.value?.()
+  presenceUnsub.value?.()
+  Object.values(photoUrls.value).forEach(URL.revokeObjectURL)
+})
 
 async function saveUsername() {
   try {
@@ -80,10 +90,30 @@ async function openConversation(conv) {
   messages.value = await loadMessages(conv.conversationId)
   unsub.value?.()
   unsub.value = subscribeMessages(conv.conversationId, (m) => messages.value.push(m))
+  // typing indicator
+  typingUnsub.value?.()
+  const typing = subscribeTyping(conv.conversationId, me.value)
+  typingUnsub.value = typing
+  typingOn = typing.send
+  // presence (online)
+  partnerOnline.value = false
+  presenceUnsub.value?.()
+  presenceUnsub.value = subscribePresence(conv.conversationId, me.value, (state) => {
+    const others = Object.values(state).flat().filter((p) => p.userId !== me.value)
+    partnerOnline.value = others.length > 0
+  })
   // simpan last room
   try { localStorage.setItem(LS_ROOM, JSON.stringify({ conversationId: conv.conversationId })) } catch {}
   // preload foto
   for (const m of messages.value) if (m.mediaPath) await preloadPhoto(m)
+}
+
+let typingOn = null
+function notifyTyping() {
+  if (typingOn) typingOn()
+  isPartnerTyping.value = false
+  clearTimeout(typingTimer)
+  typingTimer = setTimeout(() => { isPartnerTyping.value = false }, 3000)
 }
 
 async function startChat(user) {
@@ -111,9 +141,18 @@ async function send() {
   if (!draft.value.trim() || !partner.value) return
   const text = draft.value
   draft.value = ''
+  isPartnerTyping.value = false
   const cid = await ensureConversation()
   await sendText(cid, partner.value.id, text)
   messages.value.push({ id: crypto.randomUUID(), senderId: me.value, plaintext: text, createdAt: new Date().toISOString() })
+}
+
+function onDraftInput() {
+  // notify partner that we're typing (throttled via typingOn + timer)
+  if (typingOn) typingOn()
+  isPartnerTyping.value = false
+  clearTimeout(typingTimer)
+  typingTimer = setTimeout(() => { isPartnerTyping.value = false }, 1500)
 }
 
 // Pilih foto -> HANYA preview, BELUM kirim
@@ -186,7 +225,9 @@ watch(messages, (vals) => {
       </ul>
     </aside>
     <main v-if="partner">
-      <header>@{{ partner?.username || partner?.display_name }}</header>
+      <header>@{{ partner?.username || partner?.display_name }}
+        <span :class="['dot', partnerOnline ? 'on' : 'off']" :title="partnerOnline ? 'online' : 'offline'"></span>
+      </header>
       <div class="msgs">
         <div v-for="m in messages" :key="m.id" :class="['bubble', m.senderId === me ? 'me' : 'them']">
           <template v-if="m.plaintext">{{ m.plaintext }}</template>
@@ -194,11 +235,12 @@ watch(messages, (vals) => {
           <span v-else-if="m.mediaPath">📷 loading…</span>
         </div>
         <div v-if="!activeConv" class="hint">Belum ada pesan — kirim untuk mulai percakapan</div>
+        <div v-if="isPartnerTyping" class="typing">…sedang mengetik</div>
       </div>
       <form @submit.prevent="send">
         <input type="file" accept="image/*" ref="photoInput" @change="onPickPhoto" hidden />
         <button type="button" @click="photoInput?.click()">📷</button>
-        <input v-model="draft" placeholder="Type…" />
+        <input v-model="draft" @input="onDraftInput" placeholder="Type…" />
         <button type="submit">Send</button>
       </form>
       <div v-if="pendingPhoto" class="photo-confirm">
@@ -228,6 +270,10 @@ main { flex: 1; display: flex; flex-direction: column; }
 .them { background: #eee; }
 .photo { max-width: 200px; border-radius: 8px; }
 .hint { color: #999; font-size: 13px; text-align: center; margin: 12px 0; }
+.typing { color: #888; font-style: italic; font-size: 13px; margin: 4px 0; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 6px; vertical-align: middle; }
+.dot.on { background: #2ecc71; }
+.dot.off { background: #bbb; }
 form { display: flex; padding: 8px; gap: 8px; border-top: 1px solid #ddd; }
 form input:not([type=file]) { flex: 1; padding: 8px; }
 .photo-confirm { padding: 8px; border-top: 1px solid #ddd; display: flex; gap: 12px; align-items: center; }

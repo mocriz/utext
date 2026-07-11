@@ -246,6 +246,32 @@ export function subscribeMessages(conversationId, onNew) {
 
 const pollTimers = new Map()
 
+// --- Typing indicator (Realtime Broadcast, ephemeral, ga ke-DB) ---
+export function subscribeTyping(conversationId, myId) {
+  const channel = supabase
+    .channel('typing:' + conversationId)
+    .on('broadcast', { event: 'typing' }, ({ payload }) => {
+      if (payload.userId !== myId) onTyping?.(payload.userId)
+    })
+    .subscribe()
+  function onTyping() {}
+  return {
+    send: () => channel.send({ type: 'broadcast', event: 'typing', payload: { userId: myId } }),
+    unsubscribe: () => supabase.removeChannel(channel),
+  }
+}
+
+// --- Online presence (Realtime Presence) ---
+export function subscribePresence(conversationId, myId, onSync) {
+  const channel = supabase
+    .channel('presence:' + conversationId, { config: { presence: { key: myId } } })
+    .on('presence', { event: 'sync' }, () => onSync(channel.presenceState()))
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') channel.track({ online_at: Date.now() })
+    })
+  return () => supabase.removeChannel(channel)
+}
+
 // Download + decrypt foto
 export async function getPhoto(conversationId, partnerId, path, iv) {
   const { data, error } = await supabase.storage.from('media').download(path)
