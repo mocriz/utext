@@ -25,15 +25,23 @@ function ensureTokenClient() {
 }
 
 // Minta consent 1x (user klik Izinkan). Auto-silent setelahnya.
+// Ada timeout biar ga hang kalau popup ke-block browser.
 export async function authorizeDrive() {
   ensureTokenClient()
   return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Drive consent timeout (popup ke-block?)')), 15000)
     tokenClient.callback = (resp) => {
+      clearTimeout(timer)
       if (resp.error) return reject(new Error(resp.error))
       accessToken = resp.access_token
       resolve(resp.access_token)
     }
-    tokenClient.requestAccessToken({ prompt: 'consent' })
+    try {
+      tokenClient.requestAccessToken({ prompt: 'consent' })
+    } catch (e) {
+      clearTimeout(timer)
+      reject(e)
+    }
   })
 }
 

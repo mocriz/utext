@@ -11,9 +11,11 @@ onMounted(async () => {
   const u = await getAuthUser()
   if (u) {
     user.value = u
-    await ensureIdentity() // restore/generate keypair + backup
+    ready.value = true // UI langsung tampil, identity di-load background
+    ensureIdentity().catch((e) => console.warn('ensureIdentity gagal:', e.message))
+  } else {
+    ready.value = true
   }
-  ready.value = true
 })
 
 supabase.auth.onAuthStateChange(async (_event, session) => {
