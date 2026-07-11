@@ -17,6 +17,7 @@
     </div>
     <div class="pane-chat" :class="{ 'hide-mobile': ui.mobileView === 'list' }">
       <ChatPanel
+        ref="chatPanel"
         v-if="activeConv && activePartner"
         :partner="activePartner"
         :messages="visibleMessages"
@@ -73,7 +74,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, onMounted, watch } from 'vue'
+import { reactive, ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useUiStore } from '../../stores/ui'
 import { useAuthStore } from '../../stores/auth'
 import { useConversationsStore } from '../../stores/conversations'
@@ -102,7 +103,11 @@ const activeConv = ref(null)
 const activePartner = ref(null)
 const pendingPhoto = ref(null)
 const settingsSection = ref('profile')
+const chatPanel = ref(null)
 const ctx = reactive({ show: false, items: [], x: 0, y: 0, target: null })
+
+// fokus ke field text (dipakai pas buka room, balas, edit, & keyboard fisik)
+function focusComposer() { nextTick(() => chatPanel.value?.focus()) }
 
 let typingCh = null, presenceCh = null, msgCh = null, typingTimer = null, presenceTimer = null, lastSeen = 0
 const myId = computed(() => auth.user?.id)
@@ -185,6 +190,7 @@ async function onOpen(c) {
   // update last message di list (decrypted)
   const last = room.messages[room.messages.length - 1]
   if (last) conv.setLast(c.conversationId, last.plaintext || '📷 foto')
+  focusComposer()
 }
 function onNewChat(c) { onOpen(c) }
 
@@ -340,10 +346,12 @@ function startReply(m) {
     name: m.senderId === myId.value ? 'Anda' : (activePartner.value?.username || activePartner.value?.display_name),
     text: m.plaintext || '📷 foto',
   }
+  focusComposer()
 }
 function startEdit(m) {
   editingMsg.value = m
   room.draft = m.plaintext || ''
+  focusComposer()
 }
 function cancelReply() { replyingTo.value = null }
 function cancelEdit() { editingMsg.value = null; room.draft = '' }
@@ -386,6 +394,18 @@ onMounted(async () => {
       if (c) onOpen(c)
     }
   } catch {}
+
+  // auto-focus field text kalau user ngetik pakai keyboard fisik (bukan saat di input/modal lain)
+  window.addEventListener('keydown', (e) => {
+    if (!activeConv.value) return
+    const t = e.target
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+    if (ui.settingsOpen) return
+    if (e.metaKey || e.ctrlKey || e.altKey) return
+    if (e.key && e.key.length === 1) {
+      focusComposer()
+    }
+  })
 })
 
 // pass partnerOnline ke ChatHeader via wrapper

@@ -18,6 +18,7 @@
     <input ref="fileInput" type="file" accept="image/*" hidden @change="$emit('pick', $event)" />
     <IconButton icon="📷" title="Kirim foto" @click="fileInput?.click()" />
     <TextInput
+      ref="ti"
       :model-value="draft"
       :placeholder="editing ? 'Edit pesan…' : 'Tulis pesan…'"
       @update:model-value="$emit('update:draft', $event)"
@@ -49,12 +50,14 @@ const props = defineProps({
   replyTo: { type: Object, default: null },
   editing: { type: Object, default: null },
 })
+const ti = ref(null)
 const emit = defineEmits([
   'update:draft', 'typing', 'send', 'pick', 'confirm-photo', 'cancel-photo',
   'cancel-reply', 'cancel-edit',
 ])
 const fileInput = ref(null)
 const canSend = computed(() => props.draft.trim().length > 0 || !!props.preview)
+defineExpose({ focus: () => ti.value?.focus() })
 </script>
 
 <style scoped>

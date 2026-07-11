@@ -9,6 +9,7 @@
       @jump="(id) => $emit('jump', id)"
     />
     <Composer
+      ref="composer"
       :draft="draft"
       :preview="preview"
       :reply-to="replyTo"
@@ -26,6 +27,7 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import ChatHeader from './ChatHeader.vue'
 import MessageList from './MessageList.vue'
 import Composer from './Composer.vue'
@@ -42,6 +44,8 @@ defineProps({
   editing: { type: Object, default: null },
 })
 defineEmits(['back', 'bubble-menu', 'jump', 'update:draft', 'typing', 'send', 'pick', 'confirm-photo', 'cancel-photo', 'cancel-reply', 'cancel-edit'])
+defineExpose({ focus: () => composer.value?.focus() })
+const composer = ref(null)
 </script>
 
 <style scoped>

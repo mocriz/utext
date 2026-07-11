@@ -1,5 +1,6 @@
 <template>
   <input
+    ref="el"
     class="ti"
     :value="modelValue"
     :type="type"
@@ -11,6 +12,8 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
+const el = ref(null)
 defineProps({
   modelValue: { type: [String, Number], default: '' },
   type: { type: String, default: 'text' },
@@ -18,6 +21,7 @@ defineProps({
   disabled: Boolean,
 })
 defineEmits(['update:modelValue', 'input', 'enter'])
+defineExpose({ focus: () => el.value?.focus() })
 </script>
 
 <style scoped>

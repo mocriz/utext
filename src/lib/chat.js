@@ -113,6 +113,8 @@ export async function loadMessages(conversationId) {
         mediaPath: m.media_path,
         media_iv: m.media_iv,
         media_type: m.media_type,
+        reply_to: m.reply_to || null,
+        edited_at: m.edited_at || null,
       }
     })
   )
@@ -210,6 +212,7 @@ export function subscribeMessages(conversationId, onNew) {
             mediaPath: m.media_path,
             media_iv: m.media_iv,
             media_type: m.media_type,
+            reply_to: m.reply_to || null,
             createdAt: m.created_at,
           })
         } catch (e) {
@@ -244,7 +247,7 @@ export function subscribeMessages(conversationId, onNew) {
           for (const m of data) {
             lastSeen = Math.max(lastSeen, new Date(m.created_at).getTime())
             const plaintext = m.ciphertext ? await decryptText(ss, m.ciphertext, m.nonce) : null
-            onNew({ id: m.id, senderId: m.sender_id, plaintext, mediaPath: m.media_path, createdAt: m.created_at })
+            onNew({ id: m.id, senderId: m.sender_id, plaintext, mediaPath: m.media_path, createdAt: m.created_at, reply_to: m.reply_to || null })
           }
         }
       } catch {}
