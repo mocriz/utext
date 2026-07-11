@@ -8,7 +8,7 @@
         :user="u"
         @click="$emit('pick-user', u)"
       />
-      <p v-if="query.length >= 2 && !results.length" class="empty">Tidak ada user ditemukan.</p>
+      <p v-if="query.length >= 1 && !results.length" class="empty">Tidak ada user ditemukan.</p>
       <p v-else-if="query.length < 1" class="empty">Ketik minimal 1 huruf untuk mencari.</p>
     </div>
 

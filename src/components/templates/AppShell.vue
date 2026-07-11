@@ -231,8 +231,13 @@ async function startChat(user) {
   searching.value = false
   searchQuery.value = ''
   searchResults.value = []
-  const c = await startConversationWith(user)
-  onOpen(c)
+  try {
+    const c = await startConversationWith(user)
+    await conv.load()
+    const convItem = conv.byId(c)
+    if (convItem) onOpen(convItem)
+    else toast.error('Gagal buka percakapan')
+  } catch (e) { toast.error('Gagal memulai chat: ' + e.message) }
 }
 
 // ---- close room -> desktop: clear selection (sidebar tetap); mobile: balik list ----
