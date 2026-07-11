@@ -1,13 +1,19 @@
 <template>
   <aside class="sidebar">
-    <SearchBox
-      v-if="ui.searchOpen"
-      v-model="q"
-      :results="results"
-      @search="doSearch"
-      @pick="startChat"
-    />
-    <div class="list">
+    <!-- mode cari: hasil user -->
+    <div v-if="searching" class="list">
+      <UserListItem
+        v-for="u in results"
+        :key="u.id"
+        :user="u"
+        @click="$emit('pick-user', u)"
+      />
+      <p v-if="query.length >= 2 && !results.length" class="empty">Tidak ada user ditemukan.</p>
+      <p v-else-if="query.length < 2" class="empty">Ketik minimal 2 huruf untuk mencari.</p>
+    </div>
+
+    <!-- mode normal: daftar percakapan -->
+    <div v-else class="list">
       <ChatListItem
         v-for="c in conversations"
         :key="c.conversationId"
@@ -22,31 +28,17 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import SearchBox from '../molecules/SearchBox.vue'
 import ChatListItem from '../molecules/ChatListItem.vue'
-import { searchUsers, startConversationWith } from '../../lib/chat'
-import { useUiStore } from '../../stores/ui'
+import UserListItem from '../molecules/UserListItem.vue'
 
-const ui = useUiStore()
-const props = defineProps({
+defineProps({
   conversations: { type: Array, default: () => [] },
   activeId: { type: String, default: '' },
+  searching: { type: Boolean, default: false },
+  results: { type: Array, default: () => [] },
+  query: { type: String, default: '' },
 })
-const emit = defineEmits(['open', 'conv-menu', 'new-chat'])
-const q = ref('')
-const results = ref([])
-
-async function doSearch() {
-  if (q.value.length < 2) return (results.value = [])
-  results.value = await searchUsers(q.value)
-}
-async function startChat(user) {
-  results.value = []
-  q.value = ''
-  const conv = await startConversationWith(user)
-  emit('new-chat', conv)
-}
+defineEmits(['open', 'conv-menu', 'pick-user'])
 </script>
 
 <style scoped>

@@ -3,16 +3,24 @@
     <div class="pane-sidebar" :class="{ 'hide-mobile': ui.mobileView === 'chat' }">
       <AppHeader
         :prefs="prefs"
-        @search="ui.toggleSearch()"
+        :profile="auth.profile"
+        :searching="searching"
+        :query="searchQuery"
+        @open-search="openSearch"
+        @close-search="closeSearch"
+        @update:query="onSearchInput"
         @navigate="onNavigate"
         @logout="onLogout"
       />
       <Sidebar
         :conversations="conv.items"
         :active-id="ui.activeRoomId"
+        :searching="searching"
+        :results="searchResults"
+        :query="searchQuery"
         @open="onOpen"
         @conv-menu="onConvMenu"
-        @new-chat="onNewChat"
+        @pick-user="startChat"
       />
     </div>
     <div class="pane-chat" :class="{ 'hide-mobile': ui.mobileView === 'list' }">
@@ -89,7 +97,7 @@ import {
   loadMessages, sendText, sendPhoto, subscribeMessages, editMessage,
   subscribeTyping, subscribePresence, rememberPartner, getPhoto, findExistingConversation,
   deleteConversation, deleteMessageForMe, deleteMessageForAll, markDelivered, markRead,
-  updateDisplayName as rpcUpdateDisplayName, uploadAvatar,
+  updateDisplayName as rpcUpdateDisplayName, uploadAvatar, searchUsers, startConversationWith,
 } from '../../lib/chat'
 import { backupToDrive, restoreFromDrive, updateUsername, getMyProfile, updateDisplayName, updateAvatar, softDeleteAccount } from '../../lib/auth'
 
@@ -113,6 +121,10 @@ let typingCh = null, presenceCh = null, msgCh = null, typingTimer = null, presen
 const myId = computed(() => auth.user?.id)
 const replyingTo = ref(null)   // { id, mine, name, text }
 const editingMsg = ref(null)   // message object yg lagi diedit
+const searching = ref(false)
+const searchQuery = ref('')
+const searchResults = ref([])
+let searchTimer = null
 const EDIT_WINDOW_MS = 10 * 60 * 1000
 const markedReadFor = new Set() // cegah markRead berulang per room
 const seenMsgIds = new Set()    // cegah duplikat pesan realtime
@@ -193,6 +205,25 @@ async function onOpen(c) {
   focusComposer()
 }
 function onNewChat(c) { onOpen(c) }
+
+// ---- search user ----
+function openSearch() { searching.value = true }
+function closeSearch() { searching.value = false; searchQuery.value = ''; searchResults.value = [] }
+function onSearchInput(q) {
+  searchQuery.value = q
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(async () => {
+    if (q.length < 2) return (searchResults.value = [])
+    searchResults.value = await searchUsers(q)
+  }, 250)
+}
+async function startChat(user) {
+  searching.value = false
+  searchQuery.value = ''
+  searchResults.value = []
+  const c = await startConversationWith(user)
+  onOpen(c)
+}
 
 // ---- close room -> desktop: clear selection (sidebar tetap); mobile: balik list ----
 function closeRoom() {
