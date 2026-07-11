@@ -1,22 +1,10 @@
 <!-- src/components/LoginScreen.vue -->
 <script setup>
 import { ref } from 'vue'
-import { loginWithGoogle } from '../lib/auth'
-
+const emit = defineEmits(['login'])
 const loading = ref(false)
 const err = ref('')
-
-async function onLogin() {
-  loading.value = true
-  err.value = ''
-  try {
-    await loginWithGoogle()
-    // redirect ke Google; baliknya App.vue handle ensureIdentity()
-  } catch (e) {
-    err.value = e.message
-    loading.value = false
-  }
-}
+async function onLogin() { loading.value = true; err.value = ''; emit('login') }
 </script>
 
 <template>
