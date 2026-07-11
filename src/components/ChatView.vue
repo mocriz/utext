@@ -29,6 +29,8 @@ const typingUnsub = ref(null)
 const presenceUnsub = ref(null)
 const isPartnerTyping = ref(false)
 const partnerOnline = ref(false)
+const lastPartnerSeen = ref(0)
+let presenceTimer = null
 let typingTimer = null
 
 watch(me, (v) => { me.value = v })
@@ -51,6 +53,7 @@ onUnmounted(() => {
   unsub.value?.()
   typingUnsub.value?.()
   presenceUnsub.value?.()
+  clearInterval(presenceTimer)
   Object.values(photoUrls.value).forEach(URL.revokeObjectURL)
 })
 
@@ -101,12 +104,19 @@ async function openConversation(conv) {
   typingOn = typing.send
   // presence (online) — recency: partner dianggap online kalau track < 20s lalu
   partnerOnline.value = false
+  lastPartnerSeen.value = 0
   presenceUnsub.value?.()
   presenceUnsub.value = subscribePresence(conv.conversationId, me.value, (state) => {
     const others = Object.values(state).flat().filter((p) => p.userId !== me.value)
-    const fresh = others.some((p) => Date.now() - (p.online_at || 0) < 20000)
-    partnerOnline.value = fresh
+    const newest = Math.max(0, ...others.map((p) => p.online_at || 0))
+    lastPartnerSeen.value = newest
+    partnerOnline.value = Date.now() - newest < 20000
   })
+  // watchdog: tiap 5s cek recency biar dot mati walau leave event ga datang
+  clearInterval(presenceTimer)
+  presenceTimer = setInterval(() => {
+    partnerOnline.value = Date.now() - lastPartnerSeen.value < 20000
+  }, 5000)
   // simpan last room
   try { localStorage.setItem(LS_ROOM, JSON.stringify({ conversationId: conv.conversationId })) } catch {}
   // preload foto
