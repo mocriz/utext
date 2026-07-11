@@ -169,8 +169,12 @@ function sodium_b64_to_blob(b64) {
   return new Blob([bytes], { type: 'application/octet-stream' })
 }
 
-// Subscribe realtime pesan baru (Postgres Changes)
+// Subscribe realtime pesan baru (Postgres Changes) + fallback polling 3s
+// (biar ga perlu klik nama kalau WS ga connect)
 export function subscribeMessages(conversationId, onNew) {
+  let lastSeen = Date.now()
+  let polling = false
+
   const channel = supabase
     .channel('msgs:' + conversationId)
     .on(
@@ -187,9 +191,50 @@ export function subscribeMessages(conversationId, onNew) {
         }
       }
     )
-    .subscribe()
-  return () => supabase.removeChannel(channel)
+    .subscribe((status) => {
+      console.log('[realtime]', conversationId, status)
+      if (status === 'SUBSCRIBED') {
+        // WS jalan -> stop polling
+        polling = false
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        // WS gagal -> mulai polling fallback
+        if (!polling) startPolling()
+      }
+    })
+
+  async function startPolling() {
+    polling = true
+    const timer = setInterval(async () => {
+      if (!polling) return clearInterval(timer)
+      try {
+        const { data } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', conversationId)
+          .gt('created_at', new Date(lastSeen).toISOString())
+          .order('created_at', { ascending: true })
+        if (data?.length) {
+          const ss = await sharedSecretWith(partnerOf(conversationId))
+          for (const m of data) {
+            lastSeen = Math.max(lastSeen, new Date(m.created_at).getTime())
+            const plaintext = m.ciphertext ? await decryptText(ss, m.ciphertext, m.nonce) : null
+            onNew({ id: m.id, senderId: m.sender_id, plaintext, mediaPath: m.media_path, createdAt: m.created_at })
+          }
+        }
+      } catch {}
+    }, 3000)
+    pollTimers.set(conversationId, timer)
+  }
+
+  return () => {
+    polling = false
+    const t = pollTimers.get(conversationId)
+    if (t) clearInterval(t)
+    supabase.removeChannel(channel)
+  }
 }
+
+const pollTimers = new Map()
 
 // Download + decrypt foto
 export async function getPhoto(conversationId, partnerId, path, iv) {
