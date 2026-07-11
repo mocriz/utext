@@ -56,7 +56,7 @@ export async function authorizeDrive() {
 
 async function findBackupFile() {
   const res = await fetch(
-    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${DRIVE_FILE_NAME}'&fields=files(id)`,
+    `https://www.googleapis.com/drive/v3/files?q=name='${DRIVE_FILE_NAME}'+and+trashed=false&fields=files(id)`,
     { headers: { Authorization: `Bearer ${accessToken}` } }
   )
   if (res.status === 401) throw new Error('UNAUTH')
@@ -85,7 +85,7 @@ export async function backupPrivateKey(privateKeyB64) {
     const body = new Blob([JSON.stringify({ privateKey: privateKeyB64 })], { type: 'application/json' })
     const existingId = await findBackupFile()
     const form = new FormData()
-    form.append('metadata', new Blob([JSON.stringify({ name: DRIVE_FILE_NAME, parents: ['appDataFolder'] })], { type: 'application/json' }))
+    form.append('metadata', new Blob([JSON.stringify({ name: DRIVE_FILE_NAME })], { type: 'application/json' }))
     form.append('file', body)
     const url = existingId
       ? `https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=multipart`

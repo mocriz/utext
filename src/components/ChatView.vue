@@ -75,27 +75,40 @@ async function openConversation(conv) {
 }
 
 async function startChat(user) {
-  let cid = await findExistingConversation(user.id)
-  if (!cid) cid = await startConversationWith(user.id)
-  const conv = { conversationId: cid, partner: user }
-  if (!conversations.value.find((c) => c.conversationId === cid)) conversations.value.push(conv)
+  // HANYA preview — ga bikin conversation sampai pesan pertama dikirim
+  partner.value = user
+  activeConv.value = null
+  messages.value = []
   searchResults.value = []
   searchQ.value = ''
-  await openConversation(conv)
+}
+
+async function ensureConversation() {
+  if (activeConv.value) return activeConv.value
+  const cid = await startConversationWith(partner.value.id)
+  activeConv.value = cid
+  const conv = { conversationId: cid, partner: partner.value }
+  if (!conversations.value.find((c) => c.conversationId === cid)) conversations.value.push(conv)
+  rememberPartner(cid, partner.value.id)
+  unsub.value?.()
+  unsub.value = subscribeMessages(cid, (m) => messages.value.push(m))
+  return cid
 }
 
 async function send() {
-  if (!draft.value.trim() || !activeConv.value) return
+  if (!draft.value.trim() || !partner.value) return
   const text = draft.value
   draft.value = ''
-  await sendText(activeConv.value, partner.value.id, text)
+  const cid = await ensureConversation()
+  await sendText(cid, partner.value.id, text)
   messages.value.push({ id: crypto.randomUUID(), senderId: me.value, plaintext: text, createdAt: new Date().toISOString() })
 }
 
 async function onPickPhoto(e) {
   const file = e.target.files?.[0]
-  if (!file || !activeConv.value) return
-  await sendPhoto(activeConv.value, partner.value.id, file)
+  if (!file || !partner.value) return
+  const cid = await ensureConversation()
+  await sendPhoto(cid, partner.value.id, file)
   e.target.value = ''
 }
 
