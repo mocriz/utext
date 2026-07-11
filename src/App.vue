@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { supabase } from './lib/supabase'
 import { ensureIdentity } from './lib/auth'
 import LoginScreen from './components/LoginScreen.vue'
+import ChatView from './components/ChatView.vue'
 
 const user = ref(null)
 const initializing = ref(true)
@@ -26,10 +27,7 @@ setTimeout(() => { initializing.value = false }, 3000)
 <template>
   <LoginScreen v-if="!initializing && !user" />
   <div v-else-if="initializing">Loading…</div>
-  <div v-else class="app">
-    <header>utext — logged in as {{ user.email }}</header>
-    <main>Chat UI coming in Phase 5+</main>
-  </div>
+  <ChatView v-else />
 </template>
 
 <style scoped>
