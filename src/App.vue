@@ -1,27 +1,32 @@
 <script setup>
 import { ref } from 'vue'
 import { supabase } from './lib/supabase'
-import { ensureIdentity } from './lib/auth'
+import { ensureIdentity, identityStatus } from './lib/auth'
 import LoginScreen from './components/LoginScreen.vue'
 import ChatView from './components/ChatView.vue'
 
 const user = ref(null)
 const initializing = ref(true)
+let identityResolved = false
 
-// onAuthStateChange FIRING dengan session saat ini (INITIAL_SESSION) ->
-// jadi refresh tidak akan kehilangan session. Ini sumber kebenaran.
 supabase.auth.onAuthStateChange((_event, session) => {
   if (session?.user) {
     user.value = session.user
-    ensureIdentity().catch((e) => console.warn('ensureIdentity gagal:', e.message))
+    if (!identityResolved) {
+      identityResolved = true
+      ensureIdentity()
+        .then((r) => { identityStatus.value = r.status })
+        .catch((e) => { identityStatus.value = 'error'; console.warn('ensureIdentity:', e.message) })
+        .finally(() => { initializing.value = false })
+    }
   } else {
     user.value = null
+    initializing.value = false
+    identityResolved = false
   }
-  initializing.value = false
 })
 
-// Safety net: lepas initializing biar ga stuck Loading
-setTimeout(() => { initializing.value = false }, 3000)
+setTimeout(() => { initializing.value = false }, 4000)
 </script>
 
 <template>
@@ -31,7 +36,4 @@ setTimeout(() => { initializing.value = false }, 3000)
 </template>
 
 <style scoped>
-.app { font-family: sans-serif; }
-header { padding: 12px 16px; background: #f0f0f0; border-bottom: 1px solid #ddd; }
-main { padding: 16px; }
 </style>

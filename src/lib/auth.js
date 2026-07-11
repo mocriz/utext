@@ -1,19 +1,21 @@
 // src/lib/auth.js
-// Flow login: Google OAuth (Supabase) -> keypair -> username random ->
-// simpan public key -> backup raw private key ke Drive (auto-silent).
-// Atau kalau ganti device: restore private key dari Drive.
+// Login + identity E2EE. Private key di-cache di localStorage (same-device reload = instant),
+// backup/restore ke Drive cuma lewat TOMBOL (user gesture -> popup diizinkan browser).
+import { ref } from 'vue'
 import { supabase } from './supabase'
 import { generateKeypair } from './crypto'
 import { backupPrivateKey, restorePrivateKey } from './driveBackup'
 
-// --- session key disimpan di memory (ga pernah ke DB sebagai plaintext) ---
 let session = { userId: null, privateKey: null, publicKey: null }
+const LS_PRIV = 'utext_private_key'
+export const identityStatus = ref(null) // 'ok' | 'need_restore' | 'new'
 
-export function getSession() {
-  return session
-}
+function loadCachedKey() { try { return localStorage.getItem(LS_PRIV) || null } catch { return null } }
+function cacheKey(k) { try { localStorage.setItem(LS_PRIV, k) } catch {} }
+function clearKey() { try { localStorage.removeItem(LS_PRIV) } catch {} }
 
-// Login pake Google (Supabase Auth popup)
+export function getSession() { return session }
+
 export async function loginWithGoogle() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
@@ -27,63 +29,68 @@ export async function getAuthUser() {
   return data.user
 }
 
-// Setelah login: siapkan identitas E2EE (keypair + username + public key)
+// Dipanggil SEKALI pas login. GA membuka popup (biar ga di-block browser).
 export async function ensureIdentity() {
   const user = await getAuthUser()
   if (!user) throw new Error('belum login')
   session.userId = user.id
 
-  // 1. Cek profile lama (udah punya public key?)
   const { data: profile } = await supabase
     .from('profiles')
-    .select('public_key, username')
+    .select('public_key, username, key_backed_up')
     .eq('id', user.id)
     .single()
 
+  // User lama (sudah punya public key) -> restore identitas, JANGAN ubah username
   if (profile?.public_key) {
-    // user lama -> cek backup di Drive buat restore private key
-    try {
-      session.privateKey = await restorePrivateKey()
-    } catch {
-      // backup ga ada / gagal -> generate ulang (chat lama ga bisa dibuka)
-      await generateAndStore(user.id)
-    }
     session.publicKey = profile.public_key
-  } else {
-    // user baru -> generate keypair + username random
-    await generateAndStore(user.id)
-    // auto-backup raw private key ke Drive (silent, butuh consent 1x)
-    try {
-      await backupPrivateKey(session.privateKey)
-      await supabase.from('profiles').update({ key_backed_up: true }).eq('id', user.id)
-    } catch (e) {
-      // backup gagal (user tolak Drive) -> tetap jalan, ga blocking
-      console.warn('backup Drive gagal:', e.message)
+    const cached = loadCachedKey()
+    if (cached) {
+      session.privateKey = cached
+      return { status: 'ok' }
     }
+    // device baru -> butuh restore dari Drive (via tombol)
+    return { status: 'need_restore' }
   }
-  return session
-}
 
-async function generateAndStore(userId) {
+  // User baru -> generate keypair, simpan public key + username (SEKALI saja)
+  // username TIDAK di-overwrite kalau sudah ada (biar edit username bertahan)
   const kp = await generateKeypair()
   session.privateKey = kp.privateKey
   session.publicKey = kp.publicKey
-  const username = await generateUniqueUsername()
+  cacheKey(kp.privateKey)
+  const patch = { public_key: kp.publicKey }
+  if (!profile?.username) patch.username = await generateUniqueUsername()
   const { error } = await supabase
     .from('profiles')
-    .update({ public_key: kp.publicKey, username })
-    .eq('id', userId)
+    .update(patch)
+    .eq('id', user.id)
   if (error) throw error
+  return { status: 'new', needsBackup: true }
 }
 
-// Username random: "user_" + 8 karakter alnum (lowercase, cocok constraint [a-z0-9_])
+// Tombol "Backup ke Drive" (user gesture -> popup allowed)
+export async function backupToDrive() {
+  if (!session.privateKey) throw new Error('private key belum siap')
+  await backupPrivateKey(session.privateKey)
+  await supabase.from('profiles').update({ key_backed_up: true }).eq('id', session.userId)
+  return true
+}
+
+// Tombol "Restore dari Drive" (user gesture -> popup allowed)
+export async function restoreFromDrive() {
+  const key = await restorePrivateKey()
+  session.privateKey = key
+  cacheKey(key)
+  return true
+}
+
 async function generateUniqueUsername() {
   for (let attempt = 0; attempt < 10; attempt++) {
     const rand = Array.from(crypto.getRandomValues(new Uint8Array(8)))
       .map((b) => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36])
       .join('')
     const username = 'user_' + rand
-    // cek unik
     const { data } = await supabase
       .from('profiles')
       .select('id')
@@ -94,7 +101,6 @@ async function generateUniqueUsername() {
   throw new Error('gagal generate username unik')
 }
 
-// Ambil profil sendiri (username + display)
 export async function getMyProfile() {
   const user = await getAuthUser()
   if (!user) return null
@@ -102,7 +108,6 @@ export async function getMyProfile() {
   return data
 }
 
-// Update username (validasi di DB: [a-z0-9_] 1..30)
 export async function updateUsername(username) {
   const user = await getAuthUser()
   if (!user) throw new Error('belum login')
@@ -111,8 +116,8 @@ export async function updateUsername(username) {
   return true
 }
 
-// Logout
 export async function logout() {
+  clearKey()
   session = { userId: null, privateKey: null, publicKey: null }
   await supabase.auth.signOut()
 }

@@ -5,7 +5,7 @@ import {
   searchUsers, startConversationWith, listConversations, loadMessages,
   sendText, sendPhoto, subscribeMessages, rememberPartner, getPhoto,
 } from '../lib/chat'
-import { getSession, getMyProfile, updateUsername, logout } from '../lib/auth'
+import { getSession, getMyProfile, updateUsername, logout, identityStatus, backupToDrive, restoreFromDrive } from '../lib/auth'
 
 const me = ref(getSession().userId)
 const myUsername = ref('')
@@ -20,7 +20,8 @@ const unsub = ref(null)
 const photoInput = ref(null)
 const editing = ref(false)
 const newUsername = ref('')
-const photoUrls = ref({}) // messageId -> objectURL
+const photoUrls = ref({})
+const backupMsg = ref('')
 
 watch(me, (v) => { me.value = v })
 
@@ -38,6 +39,18 @@ async function saveUsername() {
     myUsername.value = newUsername.value.trim()
     editing.value = false
   } catch (e) { alert('Gagal: ' + e.message) }
+}
+
+async function doBackup() {
+  backupMsg.value = 'backup…'
+  try { await backupToDrive(); backupMsg.value = '✅ backed up' }
+  catch (e) { backupMsg.value = '❌ ' + e.message }
+}
+
+async function doRestore() {
+  backupMsg.value = 'restore…'
+  try { await restoreFromDrive(); backupMsg.value = '✅ restored'; identityStatus.value = 'ok' }
+  catch (e) { backupMsg.value = '❌ ' + e.message }
 }
 
 async function doSearch() {
@@ -95,6 +108,9 @@ async function preloadPhoto(m) {
         <input v-else v-model="newUsername" @keyup.enter="saveUsername" placeholder="new username" />
         <button v-if="!editing" @click="editing = true; newUsername = myUsername">edit</button>
         <button v-else @click="saveUsername">save</button>
+        <button v-if="identityStatus === 'new'" @click="doBackup">Backup Drive</button>
+        <button v-else-if="identityStatus === 'need_restore'" @click="doRestore">Restore Drive</button>
+        <span class="backmsg">{{ backupMsg }}</span>
         <button @click="logout">logout</button>
       </div>
       <input v-model="searchQ" @input="doSearch" placeholder="Search username…" />
