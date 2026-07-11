@@ -15,15 +15,13 @@
         @jump="(id) => $emit('jump', id)"
       />
     </template>
-    <TypingIndicator v-if="typing" />
-    <div v-if="!messages.length && !typing" class="hint">Belum ada pesan — kirim untuk mulai.</div>
+    <div v-if="!messages.length" class="hint">Belum ada pesan — kirim untuk mulai.</div>
   </div>
 </template>
 
 <script setup>
 import { ref, watch, nextTick } from 'vue'
 import MessageBubble from '../molecules/MessageBubble.vue'
-import TypingIndicator from '../molecules/TypingIndicator.vue'
 
 const props = defineProps({
   messages: { type: Array, default: () => [] },
