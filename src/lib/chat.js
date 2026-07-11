@@ -148,7 +148,7 @@ export async function sendPhoto(conversationId, partnerId, file) {
   const path = `${conversationId}/${crypto.randomUUID()}.enc`
   const { error: upErr } = await supabase.storage
     .from('media')
-    .upload(path, sodium_b64_to_blob(ciphertext), { contentType: 'application/octet-stream' })
+    .upload(path, sodium_b64_to_bytes(ciphertext), { contentType: 'application/octet-stream' })
   if (upErr) throw upErr
   const { error } = await supabase.from('messages').insert({
     conversation_id: conversationId,
@@ -162,11 +162,13 @@ export async function sendPhoto(conversationId, partnerId, file) {
   if (error) throw error
 }
 
-function sodium_b64_to_blob(b64) {
-  const bin = atob(b64)
+function sodium_b64_to_bytes(b64) {
+  // tolerate URL-safe base64 (- _ ) yang mungkin dihasilkan libsodium
+  const norm = b64.replace(/-/g, '+').replace(/_/g, '/')
+  const bin = atob(norm)
   const bytes = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
-  return new Blob([bytes], { type: 'application/octet-stream' })
+  return bytes
 }
 
 // Subscribe realtime pesan baru (Postgres Changes) + fallback polling 3s
@@ -250,6 +252,5 @@ export async function getPhoto(conversationId, partnerId, path, iv) {
   if (error) throw error
   const bytes = new Uint8Array(await data.arrayBuffer())
   const ss = await sharedSecretWith(partnerId)
-  const ctB64 = btoa(String.fromCharCode(...bytes))
-  return await decryptBytes(ss, ctB64, iv)
+  return await decryptBytes(ss, bytes, iv)
 }

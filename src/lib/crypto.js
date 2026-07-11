@@ -58,11 +58,12 @@ export async function encryptBytes(sharedSecretB64, bytes) {
   return { ciphertext: sodium.to_base64(ct), nonce: sodium.to_base64(nonce) }
 }
 
-// 6. decrypt binary (foto)
-export async function decryptBytes(sharedSecretB64, ciphertextB64, nonceB64) {
+// 6. decrypt binary (foto) — input bytes mentah (Uint8Array) atau base64
+export async function decryptBytes(sharedSecretB64, ciphertext, nonceB64) {
   await initSodium()
+  const ct = typeof ciphertext === 'string' ? sodium.from_base64(ciphertext) : ciphertext
   const pt = sodium.crypto_secretbox_open_easy(
-    sodium.from_base64(ciphertextB64),
+    ct,
     sodium.from_base64(nonceB64),
     sodium.from_base64(sharedSecretB64)
   )
