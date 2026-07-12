@@ -1,21 +1,23 @@
-# utext — backendless E2EE chat
+# utext
 
-Vue 3 + Vite frontend, Supabase (Postgres + Auth + Realtime + Storage) sebagai BaaS.
-Pesan & foto dienkripsi di browser (libsodium), Supabase hanya menyimpan ciphertext.
+Chat E2EE 1-on-1 — backendless (Supabase), static SPA (Vue 3 + Vite).
 
-## Setup
-1. Copy `.env.example` → `.env`, isi dari Supabase → Project Settings → API:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-   - `VITE_GOOGLE_CLIENT_ID` (Web application OAuth client, scope `drive.file`)
-2. `npm install`
-3. `npm run dev` (localhost)
+Fitur: E2EE X25519, Google OAuth, read receipt, reply, edit, delete (for me/all),
+typing + online indicator, search user, media encrypt, avatar cache, media viewer
+(zoom/pinch), resize sidebar, toast + confirm dialog.
 
-## Struktur
-- `src/lib/supabase.js` — Supabase client
-- `src/lib/crypto.js` — E2EE (X25519 keypair, ECDH shared secret, AES-GCM via secretbox, seal/unseal private key)
-- `src/lib/driveBackup.js` — backup/restore private key ke Google Drive (drive.file scope)
+## Quick start
+```bash
+npm install
+cp .env.example .env   # isi SUPABASE_URL, ANON_KEY, GOOGLE_CLIENT_ID
+# Jalankan SQL di supabase/ urut: phase-f → g → h → i → j → k
+npm run dev
+```
 
-## Keamanan
-- RLS di semua tabel: user hanya bisa baca/tulis chat di conversation miliknya.
-- Private key tidak pernah keluar browser. Backup ke Drive di-SEAL dengan passphrase (argon2id + secretbox).
+## Docs
+Lihat **`DOCS.md`** untuk panduan maintenance lengkap (arsitektur, SQL, troubleshooting, deploy Vercel).
+
+## Deploy
+Vercel: build `npm run build`, output `dist`, env dari `.env`.
+
+Repo: https://github.com/mocriz/utext
