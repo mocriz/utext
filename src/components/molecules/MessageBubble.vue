@@ -14,7 +14,7 @@
     </div>
 
     <div class="bubble" :class="mine ? 'me' : 'them'">
-      <img v-if="photo" :src="photo" class="photo" />
+      <img v-if="photo" :src="photo" class="photo" @click="$emit('open-media', photo)" />
       <span v-else>{{ text }}</span>
       <span class="meta">
         <span class="time" :title="fullTime">{{ time }}</span>
@@ -40,7 +40,7 @@ const props = defineProps({
   edited: { type: Boolean, default: false },
   replyTo: { type: Object, default: null }, // { id, mine, name, text }
 })
-const emit = defineEmits(['menu', 'jump'])
+const emit = defineEmits(['menu', 'jump', 'open-media'])
 
 let timer = null
 function onTouchStart() {
@@ -66,7 +66,7 @@ function onTouchEnd() { clearTimeout(timer) }
 }
 .bubble.me { background: var(--bubble-me); color: var(--bubble-me-fg); border-bottom-right-radius: 3px; }
 .bubble.them { background: var(--bubble-them); color: var(--bubble-them-fg); border-bottom-left-radius: 3px; }
-.photo { max-width: 220px; border-radius: 8px; display: block; }
+.photo { max-width: 220px; border-radius: 8px; display: block; cursor: pointer; }
 .meta { display: inline-flex; align-items: center; gap: 4px; float: right; margin: 2px 0 -2px 8px; }
 .time { font-size: 11px; color: var(--muted); cursor: default; }
 .edited { font-size: 10px; color: var(--muted); font-style: italic; }

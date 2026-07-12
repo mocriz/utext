@@ -13,6 +13,7 @@
         :reply-to="resolveReply(m)"
         @menu="(e) => $emit('bubble-menu', m, e)"
         @jump="(id) => $emit('jump', id)"
+        @open-media="(src) => $emit('open-media', src)"
       />
     </template>
     <div v-if="!messages.length" class="hint">Belum ada pesan — kirim untuk mulai.</div>
@@ -28,7 +29,7 @@ const props = defineProps({
   meId: { type: String, default: '' },
   typing: { type: Boolean, default: false },
 })
-const emit = defineEmits(['bubble-menu', 'jump'])
+const emit = defineEmits(['bubble-menu', 'jump', 'open-media'])
 const scroller = ref(null)
 
 // bangun object replyTo utk render quote
