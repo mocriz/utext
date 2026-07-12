@@ -1,6 +1,6 @@
 <template>
   <div class="shell">
-    <div class="pane-sidebar" :class="{ 'hide-mobile': ui.mobileView === 'chat' }">
+    <div class="pane-sidebar" :class="{ 'hide-mobile': ui.mobileView === 'chat' }" :style="{ width: sidebarWidth + 'px' }">
       <AppHeader
         :prefs="prefs"
         :profile="auth.profile"
@@ -23,6 +23,13 @@
         @pick-user="startChat"
       />
     </div>
+    <!-- divider resize horizontal (desktop) -->
+    <div
+      v-if="!isMobile"
+      class="divider"
+      @mousedown.prevent="startResize"
+      @touchstart.prevent="startResize"
+    />
     <div class="pane-chat" :class="{ 'hide-mobile': ui.mobileView === 'list' }">
       <ChatPanel
         ref="chatPanel"
@@ -119,6 +126,38 @@ const settingsSection = ref('profile')
 const chatPanel = ref(null)
 const confirmDialog = ref(null)
 const ctx = reactive({ show: false, items: [], x: 0, y: 0, target: null })
+
+// sidebar width (resize horizontal) — persist ke localStorage
+const sidebarWidth = ref(Number(localStorage.getItem('utext_sidebar_w') || 340))
+const isMobile = ref(window.innerWidth <= 720)
+function onResizeWindow() { isMobile.value = window.innerWidth <= 720 }
+window.addEventListener('resize', onResizeWindow)
+let resizing = false
+function startResize() {
+  resizing = true
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
+  window.addEventListener('mousemove', onDrag)
+  window.addEventListener('mouseup', stopResize)
+  window.addEventListener('touchmove', onDrag, { passive: false })
+  window.addEventListener('touchend', stopResize)
+}
+function onDrag(e) {
+  if (!resizing) return
+  const x = e.touches ? e.touches[0].clientX : e.clientX
+  const w = Math.min(Math.max(x, 240), window.innerWidth - 360)
+  sidebarWidth.value = w
+}
+function stopResize() {
+  resizing = false
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
+  localStorage.setItem('utext_sidebar_w', String(sidebarWidth.value))
+  window.removeEventListener('mousemove', onDrag)
+  window.removeEventListener('mouseup', stopResize)
+  window.removeEventListener('touchmove', onDrag)
+  window.removeEventListener('touchend', stopResize)
+}
 
 // fokus ke field text (dipakai pas buka room, balas, edit, & keyboard fisik)
 function focusComposer() { nextTick(() => chatPanel.value?.focus()) }
@@ -251,7 +290,7 @@ function closeRoom() {
   room.typing = false
   msgCh?.(); msgCh = null
   typingCh?.(); typingCh = null
-  presenceCh?.(); presenceCh = null
+  presenceCh?.unsubscribe(); presenceCh = null
   clearInterval(presenceTimer)
   clearInterval(receiptTimer)
   clearTimeout(typingTimer)
@@ -279,16 +318,22 @@ function onTyping() {
 
 // ---- presence ----
 function setupPresence(cid) {
-  presenceCh?.()
+  presenceCh?.unsubscribe()
   lastSeen = 0
   presenceCh = subscribePresence(cid, myId.value, (state) => {
-    const others = Object.values(state).flat().filter((p) => p.userId !== myId.value)
+    // state = { [key]: [{ userId, online_at }] }
+    const others = Object.values(state).flat().filter((p) => p.userId && p.userId !== myId.value)
+    if (!others.length) { room.partnerOnline = false; return }
     const max = Math.max(0, ...others.map((p) => p.online_at || 0))
     lastSeen = max
     room.partnerOnline = Date.now() - lastSeen < 30000
   })
   clearInterval(presenceTimer)
-  presenceTimer = setInterval(() => { room.partnerOnline = Date.now() - lastSeen < 30000 }, 4000)
+  // poll presence state tiap 5s biar lastSeen tetap fresh (ga balik offline kalau ga ada sync event)
+  presenceTimer = setInterval(() => {
+    presenceCh?.refresh()
+    room.partnerOnline = Date.now() - lastSeen < 30000
+  }, 5000)
 }
 
 // ---- send (atau simpan edit) ----
@@ -518,8 +563,10 @@ const activePartnerOnline = computed(() => room.partnerOnline)
 
 <style scoped>
 .shell { display: flex; height: 100vh; overflow: hidden; }
-.pane-sidebar { width: 340px; flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+.pane-sidebar { flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--border); min-width: 0; }
 .pane-chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.divider { width: 5px; flex: none; cursor: col-resize; background: transparent; transition: background .15s; }
+.divider:hover { background: var(--accent); }
 .empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--muted); gap: 8px; }
 .empty-chat .em { font-size: 48px; }
 @media (max-width: 720px) {

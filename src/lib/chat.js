@@ -302,24 +302,26 @@ export function subscribePresence(conversationId, myId, onSync) {
   const channel = supabase
     .channel('presence:' + conversationId, { config: { presence: { key: myId } } })
     .on('presence', { event: 'sync' }, () => onSync(channel.presenceState()))
+    .on('presence', { event: 'join' }, () => onSync(channel.presenceState()))
     .on('presence', { event: 'leave' }, () => onSync(channel.presenceState()))
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
-        channel.track({ online_at: Date.now() })
-        // heartbeat biar partner tau kita masih online (recency check di client)
+        channel.track({ userId: myId, online_at: Date.now() })
         clearInterval(channel._hb)
         channel._hb = setInterval(() => {
-          if (channel.state === 'subscribed') channel.track({ online_at: Date.now() })
-        }, 10000)
+          if (channel.state === 'subscribed') channel.track({ userId: myId, online_at: Date.now() })
+        }, 8000)
       } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         clearInterval(channel._hb)
-        // re-subscribe setelah jeda biar ga putus permanen
         setTimeout(() => { channel.subscribe() }, 2000)
       }
     })
-  return () => {
-    clearInterval(channel._hb)
-    supabase.removeChannel(channel)
+  return {
+    refresh: () => onSync(channel.presenceState()),
+    unsubscribe: () => {
+      clearInterval(channel._hb)
+      supabase.removeChannel(channel)
+    },
   }
 }
 
