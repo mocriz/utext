@@ -131,8 +131,8 @@ const confirmDialog = ref(null)
 const viewerSrc = ref('')
 const ctx = reactive({ show: false, items: [], x: 0, y: 0, target: null })
 
-// sidebar width (resize horizontal) — persist ke localStorage, range 260-640
-const sidebarWidth = ref(Math.min(Math.max(Number(localStorage.getItem('utext_sidebar_w') || 340), 260), 640))
+// sidebar width (resize horizontal) — persist ke localStorage, range 350-700
+const sidebarWidth = ref(Math.min(Math.max(Number(localStorage.getItem('utext_sidebar_w') || 340), 350), 700))
 const isMobile = ref(window.innerWidth <= 720)
 function onResizeWindow() { isMobile.value = window.innerWidth <= 720 }
 window.addEventListener('resize', onResizeWindow)
@@ -149,7 +149,7 @@ function startResize() {
 function onDrag(e) {
   if (!resizing) return
   const x = e.touches ? e.touches[0].clientX : e.clientX
-  const w = Math.min(Math.max(x, 260), 640)
+  const w = Math.min(Math.max(x, 350), 700)
   sidebarWidth.value = w
 }
 function stopResize() {
