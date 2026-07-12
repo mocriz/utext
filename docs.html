@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>utext — Docs & Maintenance</title>
+<style>
+  :root {
+    --bg: #0f1115; --surface: #171a21; --surface-2: #1f242e;
+    --fg: #e6e9ef; --muted: #8b93a3; --border: #2a2f3a;
+    --accent: #6c8cff; --accent-fg: #fff; --danger: #ef4444;
+    --code-bg: #11141a; --radius: 10px; --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+  }
+  /* sidebar */
+  .nav {
+    width: 260px; flex: none; height: 100vh; overflow-y: auto;
+    background: var(--surface); border-right: 1px solid var(--border);
+    padding: 16px 12px; position: sticky; top: 0;
+  }
+  .nav h2 { font-size: 16px; margin: 0 0 4px; }
+  .nav .sub { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+  .search {
+    width: 100%; padding: 8px 10px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--code-bg); color: var(--fg);
+    margin-bottom: 12px; font-size: 13px;
+  }
+  .nav a {
+    display: block; padding: 7px 10px; border-radius: var(--radius-sm);
+    color: var(--muted); text-decoration: none; font-size: 13.5px;
+  }
+  .nav a:hover { background: var(--surface-2); color: var(--fg); }
+  .nav a.active { background: var(--accent); color: var(--accent-fg); }
+  /* content */
+  .content { flex: 1; height: 100vh; overflow-y: auto; padding: 32px 48px 80px; max-width: 900px; }
+  .content h1 { font-size: 28px; margin: 0 0 8px; }
+  .content h2 { font-size: 21px; margin: 38px 0 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .content h3 { font-size: 16px; margin: 22px 0 8px; color: var(--accent); }
+  .content p { color: #c9cfdb; }
+  .content code {
+    background: var(--code-bg); padding: 2px 6px; border-radius: 4px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; color: #a9c0ff;
+  }
+  .content pre {
+    background: var(--code-bg); padding: 14px 16px; border-radius: var(--radius);
+    overflow-x: auto; border: 1px solid var(--border);
+  }
+  .content pre code { background: none; padding: 0; color: #d6deeb; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13.5px; }
+  th, td { text: left; padding: 8px 10px; border: 1px solid var(--border); }
+  th { background: var(--surface-2); }
+  td { color: #c9cfdb; }
+  .tag { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 11px; background: var(--surface-2); color: var(--muted); }
+  ul { color: #c9cfdb; }
+  li { margin: 3px 0; }
+  .note { background: var(--surface); border-left: 3px solid var(--accent); padding: 10px 14px; border-radius: var(--radius-sm); margin: 12px 0; color: var(--muted); }
+  .danger { border-left-color: var(--danger); }
+  @media (max-width: 720px) {
+    body { flex-direction: column; }
+    .nav { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--border); }
+    .content { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+  <nav class="nav">
+    <h2>utext</h2>
+    <div class="sub">Docs & Maintenance</div>
+    <input class="search" id="search" placeholder="Cari di docs…" />
+    <a href="#overview" class="navlink">Overview</a>
+    <a href="#arch" class="navlink">Arsitektur</a>
+    <a href="#structure" class="navlink">Struktur Folder</a>
+    <a href="#setup" class="navlink">Setup / First Run</a>
+    <a href="#chatjs" class="navlink">chat.js</a>
+    <a href="#appshell" class="navlink">AppShell</a>
+    <a href="#sql" class="navlink">SQL (wajib)</a>
+    <a href="#env" class="navlink">Environment</a>
+    <a href="#features" class="navlink">Fitur</a>
+    <a href="#deploy" class="navlink">Deploy Vercel</a>
+    <a href="#trouble" class="navlink">Troubleshooting</a>
+    <a href="#maint" class="navlink">Maintenance</a>
+    <a href="#sec" class="navlink">Keamanan</a>
+  </nav>
+
+  <main class="content">
+    <h1 id="overview">utext — Documentation & Maintenance</h1>
+    <p>Chat E2EE 1-on-1, backendless (Supabase BaaS), static SPA (Vue 3 + Vite). Semua fitur jalan di free tier Supabase, NO billing, personal use.</p>
+
+    <h2 id="arch">1. Arsitektur Singkat</h2>
+    <table>
+      <tr><th>Layer</th><th>Tech</th></tr>
+      <tr><td>Frontend</td><td>Vue 3 (<code>&lt;script setup&gt;</code>), Vite, Pinia</td></tr>
+      <tr><td>Backend</td><td>Supabase: Postgres + Auth + Realtime + Storage</td></tr>
+      <tr><td>Auth</td><td>Google OAuth</td></tr>
+      <tr><td>Enkripsi</td><td>X25519 (libsodium) — keypair RANDOM, tidak diturunkan dari UID</td></tr>
+      <tr><td>Key backup</td><td>Raw private key → Google Drive (tombol manual) + cache localStorage</td></tr>
+      <tr><td>Media</td><td>Enkripsi di client → upload bucket <code>media</code> (private)</td></tr>
+      <tr><td>Deploy</td><td>Static SPA (Vercel / Netlify)</td></tr>
+    </table>
+    <div class="note">Alur enkripsi: saat login pertama, generate keypair X25519. Public key → <code>profiles.public_key</code>. Private key → localStorage + Drive backup. Tiap pesan: <code>sharedSecret(publicKey lawan, privateKey kita)</code> → encrypt. <b>Private key TIDAK pernah ke Supabase.</b></div>
+
+    <h2 id="structure">2. Struktur Folder</h2>
+    <pre><code>utext/
+├── index.html
+├── package.json            # scripts: dev / build / preview
+├── vite.config.js
+├── .env.example
+├── src/
+│   ├── main.js
+│   ├── App.vue             # gate LoginScreen &lt;-&gt; AppShell, mount ToastHost
+│   ├── lib/
+│   │   ├── supabase.js     # client init
+│   │   ├── crypto.js       # generateKeypair, encrypt/decrypt
+│   │   ├── chat.js         # SEMUA logic chat
+│   │   ├── auth.js         # login, identity, backup/restore
+│   │   └── driveBackup.js  # Google Drive backup
+│   ├── stores/             # ui, auth, conversations, prefs, toast
+│   ├── components/
+│   │   ├── atoms/          # Avatar, TextInput, BaseButton, Toggle,
+│   │   │                   # ToastHost, ConfirmDialog, MediaViewer, dll
+│   │   ├── molecules/      # MessageBubble, ContextMenu, ChatListItem, dll
+│   │   ├── organisms/      # AppHeader, Sidebar, ChatPanel, MessageList, dll
+│   │   ├── templates/      # AppShell.vue (otak aplikasi)
+│   │   └── LoginScreen.vue
+└── supabase/
+    ├── schema-phase-f.sql  # status, deleted_for[], soft_delete
+    ├── schema-phase-g.sql  # reply_to, edited_at
+    ├── schema-phase-h.sql  # RPC mark_read/delivered, bucket avatars
+    ├── schema-phase-i.sql  # relax search_users 1 char
+    ├── schema-phase-j.sql  # fix delete_message_for_me
+    └── schema-phase-k.sql  # soft_delete_account, delete_conversation_for_all</code></pre>
+
+    <h2 id="setup">3. Setup / First Run</h2>
+    <pre><code>git clone https://github.com/mocriz/utext.git
+cd utext
+npm install
+cp .env.example .env   # isi SUPABASE_URL, ANON_KEY, GOOGLE_CLIENT_ID
+# Jalankan SQL ke Supabase urut: phase-f → g → h → i → j → k
+npm run dev           # http://localhost:5173</code></pre>
+    <div class="note danger"><b>Wajib:</b> tanpa jalanin SQL phase-f s/d k, fitur berikut GAGAL: reply, edit, read receipt, soft-delete account, delete message, delete conversation, search 1-char.</div>
+
+    <h2 id="chatjs">4. chat.js — Fungsi Utama</h2>
+    <table>
+      <tr><th>Fungsi</th><th>Job</th></tr>
+      <tr><td><code>startConversationWith(id)</code></td><td>Buat conversation via RPC. Terima UUID (atau object <code>{id}</code>)</td></tr>
+      <tr><td><code>findExistingConversation(id)</code></td><td>Cek sudah ada conversation 1-on-1</td></tr>
+      <tr><td><code>listConversations()</code></td><td>List conversation + partner</td></tr>
+      <tr><td><code>loadMessages(convId)</code></td><td>Load + decrypt. Filter <code>deleted_for_all</code> &amp; <code>deleted_for[]</code></td></tr>
+      <tr><td><code>sendText(...)</code></td><td>Encrypt + insert</td></tr>
+      <tr><td><code>editMessage(...)</code></td><td>Re-encrypt (max 10 mnt, pemilik)</td></tr>
+      <tr><td><code>sendPhoto(...)</code></td><td>Encrypt + upload bucket media</td></tr>
+      <tr><td><code>getPhoto(...)</code></td><td>Download + decrypt → blob URL</td></tr>
+      <tr><td><code>subscribeMessages(c, onNew, onUpdate)</code></td><td>Realtime INSERT + UPDATE + fallback polling 3s</td></tr>
+      <tr><td><code>subscribeTyping(...)</code></td><td>Broadcast typing (ephemeral)</td></tr>
+      <tr><td><code>subscribePresence(...)</code></td><td>Presence online. Return <code>{refresh, unsubscribe}</code></td></tr>
+      <tr><td><code>deleteMessageForMe(id)</code></td><td>RPC → append ke <code>deleted_for[]</code></td></tr>
+      <tr><td><code>deleteMessageForAll(id, c)</code></td><td>Set <code>deleted_for_all</code> (sender)</td></tr>
+      <tr><td><code>deleteConversation(c)</code></td><td>Hapus membership ("untuk saya")</td></tr>
+      <tr><td><code>deleteConversationForAll(c)</code></td><td>RPC → hapus messages+members+conv ("untuk semua")</td></tr>
+      <tr><td><code>softDeleteAccount()</code></td><td>RPC → <code>deleted_at=now()</code></td></tr>
+      <tr><td><code>markDelivered / markRead(c)</code></td><td>RPC receipt (silent)</td></tr>
+      <tr><td><code>searchUsers(q)</code></td><td>RPC (min 1 char)</td></tr>
+      <tr><td><code>uploadAvatar(f)</code></td><td>Upload bucket avatars, return URL</td></tr>
+    </table>
+
+    <h2 id="appshell">5. AppShell.vue — State & Handler</h2>
+    <p><b>State:</b> <code>room{messages,draft,typing,partnerOnline}</code>, <code>activeConv</code>, <code>activePartner</code>, <code>replyingTo</code>, <code>editingMsg</code>, <code>searching/searchQuery/searchResults</code>, <code>sidebarWidth</code> (350–700px), <code>viewerSrc</code>, <code>markedReadFor</code> (Set), <code>seenMsgIds</code> (Set), <code>lastSeen</code>.</p>
+    <p><b>Handler:</b></p>
+    <ul>
+      <li><code>onOpen(c)</code> — load, subscribe, mark receipt SEKALI, setup typing/presence, <b>guard re-subscribe</b> (cegah leak+spam)</li>
+      <li><code>closeRoom()</code> — unsubscribe semua, revoke blob, clear timers/sets</li>
+      <li><code>onSend()</code> — kirim / simpan edit</li>
+      <li><code>onBubbleMenu(m)</code> — lawan: hanya "Hapus untuk saya"; sendiri: + "Hapus untuk semua"</li>
+      <li><code>onConvMenu(c)</code> — "Hapus untuk saya" / "Hapus untuk semua" (konfirmasi)</li>
+      <li><code>onCtxSelect(val)</code> — eksekusi + toast</li>
+      <li><code>startChat(user)</code> — buka/buat dari search (extract UUID)</li>
+      <li><code>focusComposer()</code> — auto-focus field</li>
+    </ul>
+
+    <h2 id="sql">6. Supabase SQL — Urutan WAJIB</h2>
+    <p>Supabase → SQL Editor → Run urut:</p>
+    <ol>
+      <li><b>phase-f</b> — <code>status</code>, <code>deleted_for[]</code>, <code>deleted_for_all</code>, <code>deleted_at</code>, RPC mark_read/delivered/set_display_name/soft_delete_account</li>
+      <li><b>phase-g</b> — <code>reply_to</code>, <code>edited_at</code></li>
+      <li><b>phase-h</b> — RPC delete_message_for_me, bucket avatars + policy</li>
+      <li><b>phase-i</b> — relax search_users 1 char</li>
+      <li><b>phase-j</b> — fix delete_message_for_me (NULL-safe)</li>
+      <li><b>phase-k</b> — soft_delete_account (final), delete_conversation_for_all</li>
+    </ol>
+    <div class="note">Setelah phase-f: <code>alter publication supabase_realtime add table messages, conversations, conversation_members;</code> biar Realtime jalan.</div>
+    <p><b>RPC yang harus ada:</b> <code>create_conversation_with</code>, <code>search_users</code>, <code>mark_read</code>, <code>mark_delivered</code>, <code>set_display_name</code>, <code>soft_delete_account</code>, <code>delete_message_for_me</code>, <code>delete_conversation_for_all</code>.</p>
+
+    <h2 id="env">7. Environment Variables (.env)</h2>
+    <pre><code>VITE_SUPABASE_URL=https://sgmiqkqigfmwgiajaqvo.supabase.co
+VITE_SUPABASE_ANON_KEY=&lt;anon key&gt;
+VITE_GOOGLE_CLIENT_ID=&lt;google client id&gt;.apps.googleusercontent.com</code></pre>
+    <div class="note">JANGAN commit <code>.env</code>. Ambil dari Supabase → Project Settings → API. Google Client ID dari Cloud Console (origin <code>localhost:5173</code> + domain deploy).</div>
+
+    <h2 id="features">8. Fitur & Behavior</h2>
+    <table>
+      <tr><th>Fitur</th><th>Catatan</th></tr>
+      <tr><td>Spam echo</td><td>Fix: filter pesan sendiri + <code>seenMsgIds</code> + guard re-subscribe</td></tr>
+      <tr><td>Read receipt</td><td>1 abu=sent, 2 abu=delivered, 2 biru=read. markRead SEKALI/room</td></tr>
+      <tr><td>Reply</td><td>Quote di bubble + composer, klik → scroll. loadMessages return reply_to</td></tr>
+      <tr><td>Edit</td><td>Max 10 mnt, sendiri, teks. Tanda "·edit"</td></tr>
+      <tr><td>Delete pesan</td><td>Lawan: hanya "untuk saya". Sendiri: + "untuk semua" (realtime)</td></tr>
+      <tr><td>Delete conv</td><td>"Untuk saya"=membership. "Untuk semua"=hapus room (lawan kehilangan)</td></tr>
+      <tr><td>Online</td><td>Poll refresh 5s, threshold 30s, track {userId, online_at}</td></tr>
+      <tr><td>Typing</td><td>Di ChatHeader (ganti online → "mengetik…")</td></tr>
+      <tr><td>Search</td><td>Klik icon → header jadi input, sidebar user match (1 char)</td></tr>
+      <tr><td>Avatar</td><td>Cache Google→dataURL (hindari 429), fallback inisial</td></tr>
+      <tr><td>Media viewer</td><td>Klik foto → modal, zoom scroll/pinch 0.5–8x, Esc close</td></tr>
+      <tr><td>Resize</td><td>Divider 350–700px, persist localStorage</td></tr>
+      <tr><td>Toast</td><td>Semua aksi → toast sukses/error (atas)</td></tr>
+      <tr><td>Confirm</td><td>Custom modal (bukan confirm() browser)</td></tr>
+    </table>
+
+    <h2 id="deploy">9. Deploy Vercel</h2>
+    <ol>
+      <li>Push ke GitHub (<code>main</code>)</li>
+      <li>Vercel → New Project → import <code>mocriz/utext</code></li>
+      <li>Build: <code>npm run build</code> · Output: <code>dist</code> · Install: <code>npm install</code></li>
+      <li>Environment Variables → 3 var <code>.env</code></li>
+      <li>Deploy. Tambah domain Vercel ke Google OAuth origin + Supabase redirect</li>
+    </ol>
+
+    <h2 id="trouble">10. Troubleshooting</h2>
+    <table>
+      <tr><th>Gejala</th><th>Solusi</th></tr>
+      <tr><td><code>soft_delete_account is not a function</code></td><td>Jalankan phase-k.sql</td></tr>
+      <tr><td>delete_message_for_me gagal / pesan balik</td><td>Jalankan phase-j.sql</td></tr>
+      <tr><td>Reply/edit/receipt mati</td><td>Jalankan f→g→h</td></tr>
+      <tr><td>Search minta 2 huruf</td><td>Jalankan phase-i.sql</td></tr>
+      <tr><td>Pesan dobel/spam</td><td>Sudah fix di subscribeMessages + onOpen guard</td></tr>
+      <tr><td>Avatar 429 / NS_BINDING_ABORTED</td><td>Sudah di-cache dataURL. Abaikan <code>MaxListeners</code> (MetaMask)</td></tr>
+      <tr><td>Realtime mati</td><td><code>alter publication supabase_realtime add table messages...</code></td></tr>
+      <tr><td>Online balik offline</td><td>Sudah fix (poll refresh 5s)</td></tr>
+      <tr><td>Chat dari search ga kebuka</td><td>Sudah fix (extract UUID dari object)</td></tr>
+    </table>
+
+    <h2 id="maint">11. Maintenance Rutin</h2>
+    <ul>
+      <li><b>Update dep:</b> <code>npm update</code> → <code>npm run build</code></li>
+      <li><b>Backup DB:</b> Supabase → Database → Backups (atau <code>supabase db dump</code>)</li>
+      <li><b>Rollback:</b> <code>git log</code> → <code>git checkout &lt;commit&gt;</code> → deploy ulang</li>
+      <li><b>Log:</b> browser console. Abaikan <code>contentscript.js</code> / <code>MaxListeners</code> (MetaMask)</li>
+    </ul>
+
+    <h2 id="sec">12. Keamanan & Limitasi</h2>
+    <ul>
+      <li>E2EE: Supabase hanya simpan ciphertext. Admin TIDAK bisa baca isi chat.</li>
+      <li>Private key di localStorage (same-device) + Drive. Siapa akses device → bisa baca chat.</li>
+      <li>Free tier: 500MB DB, 1GB storage. Cukup personal.</li>
+      <li>Soft-delete: akun di-flag, chat lama tetap bisa dibaca lawan. Login Gmail bisa kembali.</li>
+      <li>Pastikan RLS aktif di semua table.</li>
+    </ul>
+
+    <div class="note">Referensi: repo <code>github.com/mocriz/utext</code> · Supabase <code>sgmiqkqigfmwgiajaqvo.supabase.co</code> · Drive backup <code>utext-key.backup.json</code> (root). LocalStorage: <code>utext_private_key</code>, <code>utext_drive_token</code>, <code>utext_sidebar_w</code>, <code>utext_avatar_cache</code>.</div>
+  </main>
+
+  <script>
+    // scroll-spy: highlight nav aktif
+    const links = [...document.querySelectorAll('.navlink')]
+    const sections = links.map(a => document.querySelector(a.getAttribute('href')))
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          const id = '#' + e.target.id
+          links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === id))
+        }
+      })
+    }, { rootMargin: '-20% 0px -70% 0px' })
+    sections.forEach(s => s && obs.observe(s))
+
+    // search filter nav
+    const search = document.getElementById('search')
+    search.addEventListener('input', () => {
+      const q = search.value.toLowerCase()
+      links.forEach(l => {
+        const t = l.textContent.toLowerCase()
+        l.style.display = (!q || t.includes(q)) ? 'block' : 'none'
+      })
+    })
+  </script>
+</body>
+</html>
