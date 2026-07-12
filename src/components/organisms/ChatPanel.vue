@@ -7,6 +7,7 @@
       :typing="typing"
       @bubble-menu="(m, e) => $emit('bubble-menu', m, e)"
       @jump="(id) => $emit('jump', id)"
+      @open-media="(src) => $emit('open-media', src)"
     />
     <Composer
       ref="composer"
@@ -43,7 +44,7 @@ defineProps({
   replyTo: { type: Object, default: null },
   editing: { type: Object, default: null },
 })
-defineEmits(['back', 'bubble-menu', 'jump', 'update:draft', 'typing', 'send', 'pick', 'confirm-photo', 'cancel-photo', 'cancel-reply', 'cancel-edit'])
+defineEmits(['back', 'bubble-menu', 'jump', 'open-media', 'update:draft', 'typing', 'send', 'pick', 'confirm-photo', 'cancel-photo', 'cancel-reply', 'cancel-edit'])
 defineExpose({ focus: () => composer.value?.focus() })
 const composer = ref(null)
 </script>

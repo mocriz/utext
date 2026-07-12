@@ -46,6 +46,7 @@
         @back="closeRoom"
         @bubble-menu="onBubbleMenu"
         @jump="jumpTo"
+        @open-media="(src) => (viewerSrc = src)"
         @update:draft="room.draft = $event"
         @typing="onTyping"
         @send="onSend"
@@ -87,6 +88,7 @@
     />
 
     <ConfirmDialog ref="confirmDialog" />
+    <MediaViewer :src="viewerSrc" @close="viewerSrc = ''" />
   </div>
 </template>
 
@@ -104,6 +106,7 @@ import ChatPanel from '../organisms/ChatPanel.vue'
 import ContextMenu from '../molecules/ContextMenu.vue'
 import SettingsSheet from '../organisms/SettingsSheet.vue'
 import ConfirmDialog from '../atoms/ConfirmDialog.vue'
+import MediaViewer from '../atoms/MediaViewer.vue'
 import {
   loadMessages, sendText, sendPhoto, subscribeMessages, editMessage,
   subscribeTyping, subscribePresence, rememberPartner, getPhoto, findExistingConversation,
@@ -125,6 +128,7 @@ const pendingPhoto = ref(null)
 const settingsSection = ref('profile')
 const chatPanel = ref(null)
 const confirmDialog = ref(null)
+const viewerSrc = ref('')
 const ctx = reactive({ show: false, items: [], x: 0, y: 0, target: null })
 
 // sidebar width (resize horizontal) — persist ke localStorage, range 260-640
