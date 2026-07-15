@@ -63,10 +63,8 @@ export async function listConversations() {
   const partnerIds = [...new Set(members.filter((m) => m.user_id !== me).map((m) => m.user_id))]
   const profilesMap = {}
   if (partnerIds.length) {
-    const { data: profs } = await supabase
-      .from('profiles')
-      .select('id, username, display_name, avatar_url')
-      .in('id', partnerIds)
+    // RPC security definer (bypass RLS) -> nama user lain pasti muncul
+    const { data: profs } = await supabase.rpc('get_profiles_by_ids', { ids: partnerIds })
     profs?.forEach((p) => (profilesMap[p.id] = p))
   }
 
