@@ -223,6 +223,10 @@ async function onOpen(c) {
   activeConv.value = c.conversationId
   activePartner.value = c.partner
   ui.openRoom(c.conversationId)
+  // mobile: push history state biar back button HP balik ke list (ga nutup web)
+  if (window.innerWidth <= 720 && history.state?.view !== 'chat') {
+    history.pushState({ view: 'chat' }, '')
+  }
   localStorage.setItem('utext_active_conv', JSON.stringify({ conversationId: c.conversationId }))
   conv.clearUnread(c.conversationId)
   rememberPartner(c.conversationId, c.partner.id) // WAJIB sebelum loadMessages/subscribe
@@ -572,6 +576,9 @@ const visibleMessages = computed(() => room.messages.filter((m) => !m._hidden &&
 onMounted(async () => {
   prefs.hydrate()
   await conv.load()
+  // baseline history (view: home) biar back button HP di list = keluar web (normal)
+  if (window.innerWidth <= 720 && !history.state) history.replaceState({ view: 'home' }, '')
+  window.addEventListener('popstate', onPopState)
   // restore last room (biar ga ilang pas refresh)
   try {
     const last = JSON.parse(localStorage.getItem('utext_active_conv') || 'null')
@@ -593,6 +600,14 @@ onMounted(async () => {
     }
   })
 })
+
+// back button HP: kalau lagi di chat (mobile) -> balik ke list, jangan nutup web
+function onPopState(e) {
+  if (window.innerWidth <= 720 && activeConv.value) {
+    closeRoom() // ini balik ke list (mobileView='list'), gak push state lagi
+  }
+  // kalau di list -> biarin default (back keluar web / ke page sebelum)
+}
 
 // pass partnerOnline ke ChatHeader via wrapper
 const activePartnerOnline = computed(() => room.partnerOnline)
