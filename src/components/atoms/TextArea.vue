@@ -57,7 +57,11 @@ function autoResize() {
   const t = el.value
   if (!t) return
   t.style.height = 'auto'
-  t.style.height = Math.min(t.scrollHeight, props.maxHeight || 140) + 'px'
+  const max = props.maxHeight || 140
+  const h = Math.min(t.scrollHeight, max)
+  t.style.height = h + 'px'
+  // scrollbar hanya muncul kalau konten beneran overflow (scrollHeight > max)
+  t.classList.toggle('scroll', t.scrollHeight > max + 1)
 }
 watch(() => props.modelValue, () => nextTick(autoResize))
 onMounted(() => nextTick(autoResize))
@@ -82,4 +86,11 @@ defineExpose({ focus: () => el.value?.focus(), blur: () => el.value?.blur() })
 }
 .ta:focus { border-color: var(--accent); }
 .ta:disabled { opacity: .6; cursor: not-allowed; }
+/* scrollbar ramping, hanya muncul kalau overflow (class .scroll di-set pas autoResize) */
+.ta { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.ta.scroll { overflow-y: auto; }
+.ta:not(.scroll) { overflow-y: hidden; }
+.ta::-webkit-scrollbar { width: 8px; }
+.ta::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+.ta::-webkit-scrollbar-track { background: transparent; }
 </style>
