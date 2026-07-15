@@ -114,7 +114,7 @@
                 <label>Read Receipt</label>
                 <div class="row">
                   <span class="muted small">Tampilkan centang biru saat pesan dibaca</span>
-                  <Toggle :on="prefs.readReceipt" @click="toggle('readReceipt')" />
+                  <Toggle :on="prefs.readReceipt" @click="comingSoon('Read receipt')" />
                 </div>
               </div>
 
@@ -122,7 +122,7 @@
                 <label>Online Indicator</label>
                 <div class="row">
                   <span class="muted small">Tampilkan status online ke lawan</span>
-                  <Toggle :on="prefs.onlineIndicator" @click="toggle('onlineIndicator')" />
+                  <Toggle :on="prefs.onlineIndicator" @click="comingSoon('Online indicator')" />
                 </div>
               </div>
 
@@ -147,6 +147,7 @@ import BaseButton from '../atoms/BaseButton.vue'
 import Toggle from '../atoms/Toggle.vue'
 import { useThemeStore } from '../../stores/theme'
 import { isUsernameAvailable } from '../../lib/auth'
+import { useToastStore } from '../../stores/toast'
 
 const props = defineProps({
   open: Boolean,
@@ -156,6 +157,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['close', 'backup', 'restore', 'save-username', 'save-display', 'avatar', 'delete-account', 'update:prefs'])
 const theme = useThemeStore()
+const toast = useToastStore()
 
 const section = ref('profile')
 const usernameDraft = ref(props.profile?.username || '')
@@ -194,6 +196,7 @@ async function onUsernameType(v) {
 }
 
 function toggle(key) { emit('update:prefs', { ...props.prefs, [key]: !props.prefs[key] }) }
+function comingSoon(name) { toast.info(`${name} coming soon`) }
 function applyCustom() { theme.setCustom({ accent: accent.value, bubbleMe: bubble.value }) }
 async function saveUsername() {
   const val = usernameDraft.value.trim()

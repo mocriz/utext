@@ -38,9 +38,14 @@ export async function ensureIdentity() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('public_key, username, deleted_at, display_name')
+    .select('public_key, username, deleted_at, display_name, setup_done')
     .eq('id', user.id)
     .single()
+
+  const meta = user.user_metadata || {}
+  const googleName = meta.full_name || meta.name || ''
+  const googleAvatar = meta.avatar_url || meta.picture || ''
+  const setupDone = !!profile?.setup_done
 
   // Akun yang pernah di-soft-delete (deleted_at SET atau public_key NULL)
   // -> reset total: hapus membership lama, generate identitas baru (mulai dari nol)
@@ -56,10 +61,10 @@ export async function ensureIdentity() {
     const cached = loadCachedKey()
     if (cached) {
       session.privateKey = cached
-      return { status: 'ok' }
+      return { status: 'ok', setupDone, googleName, googleAvatar }
     }
     // device baru -> butuh restore dari Drive (via tombol)
-    return { status: 'need_restore' }
+    return { status: 'need_restore', setupDone, googleName, googleAvatar }
   }
 
   // User baru / reset -> generate keypair, simpan public key + username (SEKALI saja)
@@ -74,7 +79,7 @@ export async function ensureIdentity() {
     .update(patch)
     .eq('id', user.id)
   if (error) throw error
-  return { status: 'new', needsBackup: true }
+  return { status: 'new', needsBackup: true, setupDone, googleName, googleAvatar }
 }
 
 // Tombol "Backup ke Drive" (user gesture -> popup allowed)
@@ -112,7 +117,7 @@ async function generateUniqueUsername() {
 export async function getMyProfile() {
   const user = await getAuthUser()
   if (!user) return null
-  const { data } = await supabase.from('profiles').select('username, display_name, avatar_url').eq('id', user.id).single()
+  const { data } = await supabase.from('profiles').select('username, display_name, avatar_url, setup_done').eq('id', user.id).single()
   return data
 }
 
@@ -150,6 +155,23 @@ export async function updateAvatar(file) {
   const { error } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', user.id)
   if (error) throw error
   return url
+}
+
+// Simpan setup awal (username wajib, display/avatar opsional) + tandai setup_done
+export async function saveSetup({ username, display_name, avatar_file }) {
+  const user = await getAuthUser()
+  if (!user) throw new Error('belum login')
+  if (avatar_file) {
+    await updateAvatar(avatar_file)
+  }
+  const patch = { username }
+  if (display_name) patch.display_name = display_name
+  const { error } = await supabase.from('profiles').update(patch).eq('id', user.id)
+  if (error) throw error
+  // tandai setup selesai
+  const { error: e2 } = await supabase.rpc('mark_setup_done')
+  if (e2) throw e2
+  return true
 }
 
 // Soft delete akun: tandai deleted_at (lawan tetap baca chat lama + lihat "Deleted Account"),
