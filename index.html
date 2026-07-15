@@ -1,10 +1,34 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>utext</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0b0f" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+
+    <title>uText — Chat Terenkripsi End-to-End</title>
+    <meta name="description" content="uText adalah aplikasi chat pribadi yang terenkripsi end-to-end. Hanya kamu dan lawan bicara yang bisa membaca pesan. Backup kunci ke Google Drive, tanpa nomor telepon." />
+    <meta name="keywords" content="chat terenkripsi, encrypted chat, end-to-end encryption, pesan privat, uText, X25519, backup Google Drive" />
+    <meta name="author" content="uText" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://utext.vercel.app/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="uText" />
+    <meta property="og:title" content="uText — Chat Terenkripsi End-to-End" />
+    <meta property="og:description" content="Pesan terenkripsi end-to-end. Hanya kamu dan lawan bicara yang bisa membacanya. Login dengan Google, tanpa nomor telepon." />
+    <meta property="og:url" content="https://utext.vercel.app/" />
+    <meta property="og:image" content="https://utext.vercel.app/og-image.svg" />
+    <meta property="og:locale" content="id_ID" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="uText — Chat Terenkripsi End-to-End" />
+    <meta name="twitter:description" content="Pesan terenkripsi end-to-end. Hanya kamu dan lawan bicara yang bisa membacanya." />
+    <meta name="twitter:image" content="https://utext.vercel.app/og-image.svg" />
+
     <!-- Google Identity Services untuk backup key ke Drive (scope drive.file) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
