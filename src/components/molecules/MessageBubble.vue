@@ -88,4 +88,8 @@ function onTouchEnd() { clearTimeout(timer) }
 .meta { display: inline-flex; align-items: center; gap: 4px; float: right; margin: 2px 0 -2px 8px; }
 .time { font-size: 11px; color: var(--muted); cursor: default; }
 .edited { font-size: 10px; color: var(--muted); font-style: italic; }
+/* mobile: matikan text selection & callout biar long-press buka menu, bukan select */
+@media (max-width: 720px) {
+  .bubble-wrap { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+}
 </style>

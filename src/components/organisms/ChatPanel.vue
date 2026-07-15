@@ -1,13 +1,14 @@
 <template>
   <section class="chat-panel">
-    <ChatHeader :partner="partner" :online="online" :typing="typing" @back="$emit('back')" />
     <MessageList
+      ref="list"
       :messages="messages"
       :me-id="meId"
       :typing="typing"
       @bubble-menu="(m, e) => $emit('bubble-menu', m, e)"
       @jump="(id) => $emit('jump', id)"
       @open-media="(src) => $emit('open-media', src)"
+      @at-bottom-change="(b) => $emit('at-bottom-change', b)"
     />
     <Composer
       ref="composer"
@@ -15,6 +16,8 @@
       :preview="preview"
       :reply-to="replyTo"
       :editing="editing"
+      :show-jump="showJump"
+      :new-count="newCount"
       @update:draft="$emit('update:draft', $event)"
       @typing="$emit('typing')"
       @send="$emit('send')"
@@ -23,6 +26,7 @@
       @cancel-photo="$emit('cancel-photo')"
       @cancel-reply="$emit('cancel-reply')"
       @cancel-edit="$emit('cancel-edit')"
+      @jump-bottom="$emit('jump-bottom')"
     />
   </section>
 </template>
@@ -43,10 +47,13 @@ defineProps({
   preview: { type: Object, default: null },
   replyTo: { type: Object, default: null },
   editing: { type: Object, default: null },
+  showJump: { type: Boolean, default: false },
+  newCount: { type: Number, default: 0 },
 })
-defineEmits(['back', 'bubble-menu', 'jump', 'open-media', 'update:draft', 'typing', 'send', 'pick', 'confirm-photo', 'cancel-photo', 'cancel-reply', 'cancel-edit'])
-defineExpose({ focus: () => composer.value?.focus() })
+defineEmits(['back', 'bubble-menu', 'jump', 'open-media', 'update:draft', 'typing', 'send', 'pick', 'confirm-photo', 'cancel-photo', 'cancel-reply', 'cancel-edit', 'jump-bottom', 'at-bottom-change'])
+defineExpose({ focus: () => composer.value?.focus(), scrollToBottom: () => list.value?.scrollToBottom() })
 const composer = ref(null)
+const list = ref(null)
 </script>
 
 <style scoped>

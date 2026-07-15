@@ -47,11 +47,15 @@
         :preview="pendingPhoto"
         :reply-to="replyingTo"
         :editing="editingMsg"
+        :show-jump="showJumpBtn"
+        :new-count="newMsgCount"
         @back="closeRoom"
         @bubble-menu="onBubbleMenu"
         @jump="jumpTo"
         @open-media="(src) => (viewerSrc = src)"
         @update:draft="onDraft"
+        @jump-bottom="onJumpBottom"
+        @at-bottom-change="onAtBottomChange"
         @typing="onTyping"
         @send="onSend"
         @pick="onPick"
@@ -131,6 +135,9 @@ const prefs = usePrefsStore()
 const toast = useToastStore()
 
 const room = reactive({ messages: [], draft: '', typing: false, partnerOnline: false })
+const showJumpBtn = ref(false)
+const newMsgCount = ref(0)
+let atBottom = true
 const activeConv = ref(null)
 const activePartner = ref(null)
 const pendingPhoto = ref(null)
@@ -232,6 +239,9 @@ async function onOpen(c) {
   activeConv.value = c.conversationId
   activePartner.value = c.partner
   ui.openRoom(c.conversationId)
+  newMsgCount.value = 0
+  showJumpBtn.value = false
+  atBottom = true
   // mobile: push history state biar back button HP balik ke list (ga nutup web)
   if (window.innerWidth <= 720 && history.state?.view !== 'chat') {
     history.pushState({ view: 'chat' }, '')
@@ -253,6 +263,8 @@ async function onOpen(c) {
       markReadLocal(c.conversationId)
       if (prefs.readReceipt) markRead(c.conversationId)
       else markDelivered(c.conversationId)
+      // kalau user lagi di atas (ga di bawah) -> tampilkan tombol loncat ke bawah + hitung
+      if (!atBottom) { newMsgCount.value++; showJumpBtn.value = true }
     }
   }, (u) => {
     // pesan dihapus untuk semua -> hide realtime (tanpa refresh)
@@ -456,6 +468,7 @@ function onBubbleMenu(m, e) {
   if (mine) {
     // pesan sendiri: bisa hapus untuk semua
     ctx.items = [
+      { label: 'Salin', value: 'copy', icon: 'mdi:content-copy' },
       { label: 'Balas', value: 'reply', icon: 'mdi:reply-outline' },
       ...(canEdit ? [{ label: 'Edit', value: 'edit', icon: 'mdi:pencil-outline' }] : []),
       { label: 'Hapus untuk saya', value: 'delete_me', icon: 'mdi:delete-outline' },
@@ -464,6 +477,7 @@ function onBubbleMenu(m, e) {
   } else {
     // pesan lawan: cuma bisa hapus untuk saya
     ctx.items = [
+      { label: 'Salin', value: 'copy', icon: 'mdi:content-copy' },
       { label: 'Balas', value: 'reply', icon: 'mdi:reply-outline' },
       { label: 'Hapus untuk saya', value: 'delete_me', icon: 'mdi:delete-outline' },
     ]
@@ -487,7 +501,12 @@ async function onCtxSelect(val) {
   const t = ctx.target
   if (t?.type === 'message') {
     const m = t.m
-    if (val === 'reply') startReply(m)
+    if (val === 'copy') {
+      try {
+        await navigator.clipboard.writeText(m.plaintext || '')
+        toast.success('Teks disalin')
+      } catch { toast.error('Gagal menyalin teks') }
+    } else if (val === 'reply') startReply(m)
     else if (val === 'edit') startEdit(m)
     else if (val === 'delete_me') {
       m._hidden = true
@@ -544,6 +563,18 @@ function cancelEdit() { editingMsg.value = null; room.draft = '' }
 function jumpTo(id) {
   const el = document.getElementById('msg-' + id)
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  // klik reply -> user pindah ke bawah, reset counter jump
+  newMsgCount.value = 0
+  showJumpBtn.value = false
+}
+function onJumpBottom() {
+  chatPanel.value?.scrollToBottom()
+  newMsgCount.value = 0
+  showJumpBtn.value = false
+}
+function onAtBottomChange(b) {
+  atBottom = b
+  if (b) { newMsgCount.value = 0; showJumpBtn.value = false }
 }
 
 // ---- settings / more menu ----
@@ -597,6 +628,17 @@ onMounted(async () => {
   // baseline history (view: home) biar back button HP di list = keluar web (normal)
   if (window.innerWidth <= 720 && !history.state) history.replaceState({ view: 'home' }, '')
   window.addEventListener('popstate', onPopState)
+  // mobile: composer ngikut keyboard (visualViewport) biar header & chat tetap kelihatan
+  if (window.visualViewport) {
+    const applyKb = () => {
+      const vv = window.visualViewport
+      const inset = Math.max(0, window.innerHeight - (vv.offsetTop + vv.height))
+      document.documentElement.style.setProperty('--kb-inset', inset + 'px')
+    }
+    window.visualViewport.addEventListener('resize', applyKb)
+    window.visualViewport.addEventListener('scroll', applyKb)
+    applyKb()
+  }
   // restore last room (biar ga ilang pas refresh)
   try {
     const last = JSON.parse(localStorage.getItem('utext_active_conv') || 'null')
