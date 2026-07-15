@@ -31,7 +31,7 @@
             <!-- PROFIL -->
             <section v-if="section === 'profile'">
               <div class="profile-head">
-                <Avatar :src="profile?.avatar_url" :name="profile?.username || profile?.display_name" size="lg" />
+                <Avatar :src="profile?.avatar_url" :name="profile?.display_name || profile?.username" size="lg" />
                 <div>
                   <div class="big">@{{ profile?.username }}</div>
                   <div class="muted">{{ profile?.display_name }}</div>

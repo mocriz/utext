@@ -71,7 +71,7 @@ const props = defineProps({
 const emit = defineEmits(['done'])
 
 const username = ref('')
-const displayName = ref('')
+const displayName = ref(props.googleName || '')
 const usernameStatus = ref('')
 const usernameErr = ref('')
 const backing = ref(false)

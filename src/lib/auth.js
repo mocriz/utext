@@ -164,8 +164,12 @@ export async function saveSetup({ username, display_name, avatar_file }) {
   if (avatar_file) {
     await updateAvatar(avatar_file)
   }
+  // kalau display_name di-skip, pakai nama Google sebagai default
+  const meta = user.user_metadata || {}
+  const googleName = meta.full_name || meta.name || ''
+  const finalDisplay = (display_name && display_name.trim()) || googleName
   const patch = { username }
-  if (display_name) patch.display_name = display_name
+  if (finalDisplay) patch.display_name = finalDisplay
   const { error } = await supabase.from('profiles').update(patch).eq('id', user.id)
   if (error) throw error
   // tandai setup selesai

@@ -16,7 +16,7 @@
     <!-- mode normal -->
     <template v-else>
       <div class="left">
-        <Avatar :src="profile?.avatar_url" :name="profile?.username || profile?.display_name" size="sm" />
+        <Avatar :src="profile?.avatar_url" :name="profile?.display_name || profile?.username" size="sm" />
       </div>
       <div class="center">uText</div>
       <div class="right">

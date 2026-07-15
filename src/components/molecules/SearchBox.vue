@@ -11,8 +11,8 @@
     </TextInput>
     <ul v-if="results.length" class="results">
       <li v-for="u in results" :key="u.id" @click="$emit('pick', u)">
-        <Avatar :src="u.avatar_url" :name="u.username || u.display_name" size="sm" />
-        <span>@{{ u.username || u.display_name }}</span>
+        <Avatar :src="u.avatar_url" :name="u.display_name || u.username" size="sm" />
+        <span>{{ u.display_name || ('@' + u.username) }}</span>
       </li>
     </ul>
   </div>
