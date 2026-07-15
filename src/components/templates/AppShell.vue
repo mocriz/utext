@@ -249,7 +249,13 @@ async function onOpen(c) {
   localStorage.setItem('utext_active_conv', JSON.stringify({ conversationId: c.conversationId }))
   conv.clearUnread(c.conversationId)
   rememberPartner(c.conversationId, c.partner.id) // WAJIB sebelum loadMessages/subscribe
-  room.messages = (await loadMessages(c.conversationId)).map(enrich)
+  try {
+    room.messages = (await loadMessages(c.conversationId)).map(enrich)
+  } catch (e) {
+    toast.error('Gagal memuat pesan: ' + e.message)
+    console.error('[loadMessages]', e)
+    room.messages = []
+  }
   msgCh?.()
   msgCh = subscribeMessages(c.conversationId, (m) => {
     if (seenMsgIds.has(m.id)) return

@@ -91,28 +91,32 @@ export async function findExistingConversation(targetUserId) {
   return shared?.[0]?.conversation_id || null
 }
 
-// Load pesan lama (decrypt semua) — cache dulu (offline/instant), lalu sync server
-import {
-  cacheMessages, getCachedMessages, cacheMessage, deleteCachedMessage, clearAllCache,
-} from './cache'
-
+// Load pesan lama (decrypt semua) — server-first (otoritas), cache cuma fallback kalau offline
 export async function loadMessages(conversationId) {
   const me = getSession().userId
-  // 1) cache lokal dulu (langsung tampil, jalan offline)
+  // 1) cache lokal (buat fallback offline + instant feel)
   let cached = []
   try { cached = await getCachedMessages(conversationId) } catch {}
-  const cachedMap = new Map(cached.map((m) => [m.id, m]))
 
-  // 2) fetch dari server (sync pesan baru / perubahan)
+  // 2) fetch dari server
   let data = []
+  let serverOk = false
   try {
     const { data: d, error } = await supabase
       .from('messages')
       .select('*')
       .eq('conversation_id', conversationId)
       .order('created_at', { ascending: true })
-    if (!error) data = d || []
-  } catch { /* offline: pakai cache */ }
+    if (!error) { data = d || []; serverOk = true }
+  } catch (e) {
+    console.warn('loadMessages server gagal:', e.message)
+  }
+
+  // 3) kalau server gagal (offline) -> pakai cache
+  if (!serverOk) {
+    if (cached.length) return cached.map((m) => ({ ...m, edited: !!m.edited_at }))
+    throw new Error('gagal memuat pesan (offline & cache kosong)')
+  }
 
   const visible = data.filter((m) => {
     if (m.deleted_for_all) return false
@@ -120,28 +124,17 @@ export async function loadMessages(conversationId) {
     return true
   })
 
-  let out = []
-  try {
-    const ss = await sharedSecretWith(partnerOf(conversationId))
-    out = await Promise.all(visible.map(async (m) => {
-      const plaintext = m.ciphertext ? await decryptText(ss, m.ciphertext, m.nonce) : null
-      return {
-        id: m.id, senderId: m.sender_id, plaintext, createdAt: m.created_at,
-        mediaPath: m.media_path, media_iv: m.media_iv, media_type: m.media_type,
-        reply_to: m.reply_to || null, edited_at: m.edited_at || null, conversationId,
-      }
-    }))
-  } catch (e) {
-    console.warn('decrypt gagal, pakai cache:', e.message)
-  }
+  const ss = await sharedSecretWith(partnerOf(conversationId))
+  const out = await Promise.all(visible.map(async (m) => ({
+    id: m.id, senderId: m.sender_id,
+    plaintext: m.ciphertext ? await decryptText(ss, m.ciphertext, m.nonce) : null,
+    createdAt: m.created_at, mediaPath: m.media_path, media_iv: m.media_iv,
+    media_type: m.media_type, reply_to: m.reply_to || null, edited_at: m.edited_at || null,
+    conversationId,
+  })))
 
-  // 3) tulis ke cache (server punya otoritas penuh)
+  // 4) cache hasil (biar next open instant/offline)
   try { await cacheMessages(conversationId, out) } catch {}
-
-  // 4) kalau server kosong (offline/error) tapi cache ada -> pakai cache
-  if (!out.length && cached.length) {
-    return cached.map((m) => ({ ...m, edited: !!m.edited_at }))
-  }
   return out
 }
 
