@@ -38,12 +38,20 @@ export async function ensureIdentity() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('public_key, username, key_backed_up')
+    .select('public_key, username, deleted_at, display_name')
     .eq('id', user.id)
     .single()
 
-  // User lama (sudah punya public key) -> restore identitas, JANGAN ubah username
-  if (profile?.public_key) {
+  // Akun yang pernah di-soft-delete (deleted_at SET atau public_key NULL)
+  // -> reset total: hapus membership lama, generate identitas baru (mulai dari nol)
+  const needReset = profile?.deleted_at || !profile?.public_key
+  if (needReset) {
+    const { reset_my_account } = await import('./chat')
+    try { await reset_my_account() } catch {}
+  }
+
+  // User lama (sudah punya public key, belum pernah dihapus) -> restore identitas
+  if (profile?.public_key && !profile.deleted_at) {
     session.publicKey = profile.public_key
     const cached = loadCachedKey()
     if (cached) {
@@ -54,8 +62,7 @@ export async function ensureIdentity() {
     return { status: 'need_restore' }
   }
 
-  // User baru -> generate keypair, simpan public key + username (SEKALI saja)
-  // username TIDAK di-overwrite kalau sudah ada (biar edit username bertahan)
+  // User baru / reset -> generate keypair, simpan public key + username (SEKALI saja)
   const kp = await generateKeypair()
   session.privateKey = kp.privateKey
   session.publicKey = kp.publicKey
