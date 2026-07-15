@@ -51,6 +51,7 @@
         @typing="onTyping"
         @send="onSend"
         @pick="onPick"
+        @paste-image="onPasteImage"
         @confirm-photo="onConfirmPhoto"
         @cancel-photo="onCancelPhoto"
         @cancel-reply="cancelReply"
@@ -369,16 +370,16 @@ function setupPresence(cid) {
 
 // ---- send (atau simpan edit) ----
 async function onSend() {
-  const text = room.draft.trim()
-  if (!text || !activeConv.value) return
+  // validasi: harus ada >=1 karakter non-whitespace, tidak melebihi batas
+  const text = room.draft
+  if (!text.trim() || !activeConv.value) return
   room.draft = ''
-
   // mode EDIT
   if (editingMsg.value) {
     const m = editingMsg.value
     editingMsg.value = null
-    await editMessage(m.id, activePartner.value.id, text)
-    m.plaintext = text
+    await editMessage(m.id, activePartner.value.id, text.trim())
+    m.plaintext = text.trim()
     m.edited = true
     return
   }
@@ -392,14 +393,19 @@ async function onSend() {
   }
   const replyId = replyingTo.value?.id || null
   replyingTo.value = null
-  await sendText(cid, activePartner.value.id, text, replyId)
-  conv.setLast(cid, text)
+  await sendText(cid, activePartner.value.id, text, replyId) // kirim ISI ASLI (spasi depan dipertahankan)
+  conv.setLast(cid, text.trim())
   room.messages.push(enrich({ id: crypto.randomUUID(), senderId: myId.value, plaintext: text, createdAt: new Date().toISOString(), reply_to: replyId, receipt: 'sent' }))
 }
 
 // ---- photo (preview dulu) ----
 function onPick(e) {
   const f = e.target.files?.[0]
+  if (!f) return
+  URL.revokeObjectURL(pendingPhoto.value?.url || '')
+  pendingPhoto.value = { file: f, url: URL.createObjectURL(f), name: f.name }
+}
+function onPasteImage(f) {
   if (!f) return
   URL.revokeObjectURL(pendingPhoto.value?.url || '')
   pendingPhoto.value = { file: f, url: URL.createObjectURL(f), name: f.name }

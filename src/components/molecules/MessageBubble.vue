@@ -15,7 +15,16 @@
 
     <div class="bubble" :class="mine ? 'me' : 'them'">
       <img v-if="photo" :src="photo" class="photo" @click="$emit('open-media', photo)" />
-      <span v-else>{{ text }}</span>
+      <span v-else class="content">
+        <template v-for="(n, i) in nodes" :key="i">
+          <span v-if="n.type === 'text'">{{ n.text }}</span>
+          <strong v-else-if="n.type === 'bold'">{{ n.text }}</strong>
+          <em v-else-if="n.type === 'italic'">{{ n.text }}</em>
+          <code v-else-if="n.type === 'code'" class="md-code">{{ n.text }}</code>
+          <span v-else-if="n.type === 'strike'" class="md-strike">{{ n.text }}</span>
+          <a v-else-if="n.type === 'link'" :href="n.href" target="_blank" rel="noopener noreferrer" @click.stop>{{ n.text }}</a>
+        </template>
+      </span>
       <span class="meta">
         <span class="time" :title="fullTime">{{ time }}</span>
         <span v-if="edited" class="edited">diedit</span>
@@ -26,8 +35,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import CheckIcon from '../atoms/CheckIcon.vue'
+import { parseMarkdown } from '../../lib/markdown'
 
 const props = defineProps({
   id: { type: [String, Number], default: '' },
@@ -38,9 +48,10 @@ const props = defineProps({
   fullTime: { type: String, default: '' },
   receipt: { type: String, default: 'sent' },
   edited: { type: Boolean, default: false },
-  replyTo: { type: Object, default: null }, // { id, mine, name, text }
+  replyTo: { type: Object, default: null },
 })
 const emit = defineEmits(['menu', 'jump', 'open-media'])
+const nodes = computed(() => parseMarkdown(props.text))
 
 let timer = null
 function onTouchStart() {
@@ -66,7 +77,14 @@ function onTouchEnd() { clearTimeout(timer) }
 }
 .bubble.me { background: var(--bubble-me); color: var(--bubble-me-fg); border-bottom-right-radius: 3px; }
 .bubble.them { background: var(--bubble-them); color: var(--bubble-them-fg); border-bottom-left-radius: 3px; }
+.content { white-space: pre-wrap; }
 .photo { max-width: 220px; border-radius: 8px; display: block; cursor: pointer; }
+.md-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+  background: rgba(127,127,127,.22); padding: 1px 5px; border-radius: 4px;
+}
+.md-strike { text-decoration: line-through; opacity: .75; }
+.bubble a { color: inherit; text-decoration: underline; }
 .meta { display: inline-flex; align-items: center; gap: 4px; float: right; margin: 2px 0 -2px 8px; }
 .time { font-size: 11px; color: var(--muted); cursor: default; }
 .edited { font-size: 10px; color: var(--muted); font-style: italic; }
