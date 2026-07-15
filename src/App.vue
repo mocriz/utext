@@ -2,11 +2,13 @@
 import { computed } from 'vue'
 import { useAuthStore } from './stores/auth'
 import LoginScreen from './components/LoginScreen.vue'
+import SetupScreen from './components/organisms/SetupScreen.vue'
 import AppShell from './components/templates/AppShell.vue'
 import ToastHost from './components/atoms/ToastHost.vue'
 
 const auth = useAuthStore()
-const showApp = computed(() => auth.isReady && auth.isAuthed && auth.identityStatus !== 'need_restore')
+const showApp = computed(() => auth.isReady && auth.isAuthed && auth.identityStatus !== 'need_restore' && auth.setupDone)
+const showSetup = computed(() => auth.isReady && auth.isAuthed && auth.identityStatus === 'new' && !auth.setupDone)
 </script>
 
 <template>
@@ -15,6 +17,12 @@ const showApp = computed(() => auth.isReady && auth.isAuthed && auth.identitySta
     @login="auth.login()"
   />
   <div v-else-if="!auth.isReady" class="boot">Memuat…</div>
+  <SetupScreen
+    v-else-if="showSetup"
+    :google-name="auth.googleName"
+    :google-avatar="auth.googleAvatar"
+    @done="auth.doSetup"
+  />
   <AppShell v-else-if="showApp" />
   <div v-else class="boot">
     <p>Kunci belum tersedia.</p>

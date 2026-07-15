@@ -5,15 +5,18 @@ import { supabase } from '../lib/supabase'
 import {
   loginWithGoogle, getAuthUser, ensureIdentity, logout as authLogout,
   getMyProfile, updateUsername, backupToDrive, restoreFromDrive,
-  cacheKey, session,
+  cacheKey, session, saveSetup,
 } from '../lib/auth'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
-    profile: null, // { username, display_name, avatar_url }
+    profile: null, // { username, display_name, avatar_url, setup_done }
+    googleName: '',
+    googleAvatar: '',
     initializing: true,
     identityStatus: null, // 'ok' | 'new' | 'need_restore' | 'error'
+    setupDone: false,
     resolved: false,
   }),
   getters: {
@@ -45,6 +48,9 @@ export const useAuthStore = defineStore('auth', {
       try {
         const r = await ensureIdentity()
         this.identityStatus = r.status
+        this.setupDone = r.setupDone
+        this.googleName = r.googleName || ''
+        this.googleAvatar = r.googleAvatar || ''
         const p = await getMyProfile()
         this.profile = p
       } catch (e) {
@@ -68,6 +74,13 @@ export const useAuthStore = defineStore('auth', {
       // simpan key hasil restore ke session + localStorage
       session.privateKey = key
       cacheKey(key)
+      this.identityStatus = 'ok'
+    },
+    // Setup awal (username wajib + backup, display/avatar opsional)
+    async doSetup(payload) {
+      await saveSetup(payload)
+      this.setupDone = true
+      this.profile = await getMyProfile()
       this.identityStatus = 'ok'
     },
     // Mulai dari nol (akun baru / backup hilang): generate keypair baru

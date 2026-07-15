@@ -400,6 +400,18 @@ export async function updateDisplayName(name) {
   if (error) throw error
 }
 
+// Online presence fallback: ambil last_seen partner dari DB
+export async function getLastSeen(targetUserId) {
+  const { data, error } = await supabase.rpc('get_last_seen', { target_user_id: targetUserId })
+  if (error) return null
+  return data ? new Date(data).getTime() : null
+}
+
+// Heartbeat: update last_seen kita (biar lawan liat kita online)
+export async function touchLastSeen() {
+  try { await supabase.rpc('touch_last_seen') } catch {}
+}
+
 // Upload avatar ke Storage bucket 'avatars', return public URL
 export async function uploadAvatar(file) {
   const ext = file.name.split('.').pop() || 'jpg'

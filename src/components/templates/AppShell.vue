@@ -111,6 +111,7 @@ import {
   loadMessages, sendText, sendPhoto, subscribeMessages, editMessage,
   subscribeTyping, subscribePresence, rememberPartner, getPhoto, findExistingConversation,
   deleteConversation, deleteMessageForMe, deleteMessageForAll, deleteConversationForAll, markDelivered, markRead,
+  getLastSeen, touchLastSeen,
   updateDisplayName as rpcUpdateDisplayName, uploadAvatar, searchUsers, startConversationWith,
 } from '../../lib/chat'
 import { backupToDrive, restoreFromDrive, updateUsername, getMyProfile, updateDisplayName, updateAvatar, softDeleteAccount } from '../../lib/auth'
@@ -219,6 +220,7 @@ async function onOpen(c) {
   activeConv.value = c.conversationId
   activePartner.value = c.partner
   ui.openRoom(c.conversationId)
+  localStorage.setItem('utext_active_conv', JSON.stringify({ conversationId: c.conversationId }))
   conv.clearUnread(c.conversationId)
   rememberPartner(c.conversationId, c.partner.id) // WAJIB sebelum loadMessages/subscribe
   room.messages = (await loadMessages(c.conversationId)).map(enrich)
@@ -229,9 +231,10 @@ async function onOpen(c) {
     enrich(m)
     room.messages.push(m)
     conv.setLast(c.conversationId, m.plaintext || '📷 foto')
-    // receipt: pesan dari partner -> delivered/read (jika pref on)
+    // pesan partner masuk -> kita langsung tandai read di LOCAL (optimistic, ga nunggu RPC)
     if (m.senderId !== myId.value) {
       conv.bumpUnread(c.conversationId)
+      markReadLocal(c.conversationId)
       if (prefs.readReceipt) markRead(c.conversationId)
       else markDelivered(c.conversationId)
     }
@@ -240,13 +243,14 @@ async function onOpen(c) {
     const existing = room.messages.find((x) => x.id === u.id)
     if (existing) existing._deleted = true
   })
-  // tandai pesan partner sebagai read/delivered pas room dibuka (SEKALI)
+  // tandai pesan partner sebagai read/delivered pas room dibuka (SEKALI, local dulu)
   if (!markedReadFor.has(c.conversationId)) {
     markedReadFor.add(c.conversationId)
+    markReadLocal(c.conversationId)
     if (prefs.readReceipt) markRead(c.conversationId)
     else markDelivered(c.conversationId)
   }
-  // update receipt lokal pesan kita yang dikirim sebelumnya
+  // update receipt lokal pesan kita yang dikirim sebelumnya (dari DB lawan)
   if (prefs.readReceipt) refreshReceipts(c.conversationId)
   setupTyping(c.conversationId)
   setupPresence(c.conversationId)
@@ -256,6 +260,13 @@ async function onOpen(c) {
   const last = room.messages[room.messages.length - 1]
   if (last) conv.setLast(c.conversationId, last.plaintext || '📷 foto')
   focusComposer()
+}
+
+// Tandai semua pesan partner di room ini sebagai read di LOCAL (langsung 2 biru, ga nunggu RPC)
+function markReadLocal(cid) {
+  for (const m of room.messages) {
+    if (m.senderId !== myId.value && m.receipt !== 'read') m.receipt = 'read'
+  }
 }
 function onNewChat(c) { onOpen(c) }
 
@@ -300,6 +311,7 @@ function closeRoom() {
   clearTimeout(typingTimer)
   markedReadFor.clear()
   seenMsgIds.clear()
+  localStorage.removeItem('utext_active_conv')
 }
 
 // ---- typing ----
@@ -321,22 +333,35 @@ function onTyping() {
 }
 
 // ---- presence ----
+// Kombinasi: Presence (realtime) + fallback DB last_seen (lebih reliable)
 function setupPresence(cid) {
   presenceCh?.unsubscribe()
   lastSeen = 0
+  const partnerId = activePartner.value?.id
+  // Presence realtime
   presenceCh = subscribePresence(cid, myId.value, (state) => {
-    // state = { [key]: [{ userId, online_at }] }
     const others = Object.values(state).flat().filter((p) => p.userId && p.userId !== myId.value)
-    if (!others.length) { room.partnerOnline = false; return }
-    const max = Math.max(0, ...others.map((p) => p.online_at || 0))
-    lastSeen = max
-    room.partnerOnline = Date.now() - lastSeen < 30000
+    if (others.length) {
+      const max = Math.max(0, ...others.map((p) => p.online_at || 0))
+      lastSeen = max
+      room.partnerOnline = Date.now() - lastSeen < 30000
+    }
   })
+  // kita heartbeat biar lawan liat kita online
+  touchLastSeen()
   clearInterval(presenceTimer)
-  // poll presence state tiap 5s biar lastSeen tetap fresh (ga balik offline kalau ga ada sync event)
-  presenceTimer = setInterval(() => {
-    presenceCh?.refresh()
-    room.partnerOnline = Date.now() - lastSeen < 30000
+  presenceTimer = setInterval(async () => {
+    touchLastSeen() // update last_seen kita
+    // fallback: cek last_seen partner dari DB
+    if (partnerId) {
+      const ts = await getLastSeen(partnerId)
+      if (ts) {
+        lastSeen = ts
+        room.partnerOnline = Date.now() - ts < 60000 // 1 menit threshold (DB lebih lambat dari presence)
+      } else {
+        room.partnerOnline = false
+      }
+    }
   }, 5000)
 }
 
@@ -539,9 +564,9 @@ const visibleMessages = computed(() => room.messages.filter((m) => !m._hidden &&
 onMounted(async () => {
   prefs.hydrate()
   await conv.load()
-  // restore last room
+  // restore last room (biar ga ilang pas refresh)
   try {
-    const last = JSON.parse(localStorage.getItem('utext_last_room') || 'null')
+    const last = JSON.parse(localStorage.getItem('utext_active_conv') || 'null')
     if (last?.conversationId) {
       const c = conv.byId(last.conversationId)
       if (c) onOpen(c)

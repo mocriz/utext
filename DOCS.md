@@ -62,7 +62,8 @@ utext/
     ├── schema-phase-j.sql  # fix delete_message_for_me (NULL bug)
     └── schema-phase-k.sql  # RPC: soft_delete_account, delete_conversation_for_all
     ├── schema-phase-l.sql  # soft_delete_account: null public_key, display 'Deleted Account'
-    └── schema-phase-m.sql  # reset_my_account: hapus membership lama + clear deleted_at
+    ├── schema-phase-m.sql  # reset_my_account: hapus membership lama + clear deleted_at
+    └── schema-phase-n.sql  # setup_done flag + last_seen (online fallback) + RPC
 ```
 
 ---
@@ -294,6 +295,31 @@ Static SPA, tidak butuh server. Supabase menangani semua backend.
 ### Catatan penting
 - Jangan pertahankan `public_key` saat delete — kalau dipertahankan, `ensureIdentity` balik ke branch "user lama" → loop `need_restore` (bug). Null-kan agar daftar ulang = user baru otomatis.
 - `restoreFromDrive()` return **privateKey** (bukan `true`).
+
+---
+
+## 13.5 Setup Screen, Read Receipt & Online Indicator
+
+### Setup Screen (onboarding wajib)
+- `SetupScreen.vue` muncul pas `status==='new'` && `!setup_done` (gate di `App.vue`, sebelum AppShell).
+- **Username WAJIB** (live-check `isUsernameAvailable`), **Backup Drive WAJIB** (`backupToDrive`), **Display name BOLEH SKIP** (placeholder = nama Google), **Photo BOLEH SKIP** (placeholder = avatar Google).
+- Selesai → `saveSetup()` → update username/display/avatar + RPC `mark_setup_done()` → `setupDone=true` → masuk AppShell.
+- SQL phase-n: `profiles.setup_done` boolean.
+
+### Read Receipt (local-first, no delay)
+- Pas buka room: `markReadLocal()` langsung set semua pesan partner `receipt='read'` di client → **2 biru instant** (ga nunggu RPC).
+- RPC `mark_read` jalan background (silent) → sync ke lawan (biar lawan liat kita read).
+- `refreshReceipts` polling 3s → sync status pesan KITA dari lawan (sent→delivered→read).
+- Pref `prefs.readReceipt` default true. Toggle Settings → disabled + toast "coming soon".
+
+### Online Indicator (text-only + DB fallback)
+- `ChatHeader` ROMBAK: **tanpa dot**, cuma tulisan "Online" / "Terakhir dilihat …" / "Baru saja".
+- `setupPresence`: Presence realtime + **fallback `get_last_seen` dari DB** (RPC phase-n) + heartbeat `touch_last_seen` tiap 5s.
+- Threshold: 30s (presence) / 60s (DB fallback).
+- Pref `prefs.onlineIndicator` default true. Toggle Settings → disabled + toast "coming soon".
+
+### Refresh state persist
+- `activeConv` disimpan ke `localStorage` (`utext_active_conv`) pas buka room; `onMounted` restore otomatis (chat room ga ilang pas refresh). `closeRoom()` hapus key.
 
 ---
 
