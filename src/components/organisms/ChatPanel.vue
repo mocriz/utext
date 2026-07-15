@@ -1,5 +1,6 @@
 <template>
   <section class="chat-panel">
+    <ChatHeader :partner="partner" :online="online" :typing="typing" @back="$emit('back')" />
     <MessageList
       ref="list"
       :messages="messages"
@@ -57,5 +58,6 @@ const list = ref(null)
 </script>
 
 <style scoped>
-.chat-panel { display: flex; flex-direction: column; height: 100%; background: var(--bg); }
+.chat-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--bg); }
+:deep(.msgs) { min-height: 0; }
 </style>
