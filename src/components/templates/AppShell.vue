@@ -125,7 +125,6 @@ import {
   getLastSeen, touchLastSeen,
   updateDisplayName as rpcUpdateDisplayName, uploadAvatar, searchUsers, startConversationWith,
 } from '../../lib/chat'
-import { getDraft, saveDraft } from '../../lib/cache'
 import { backupToDrive, restoreFromDrive, updateUsername, getMyProfile, updateDisplayName, updateAvatar, softDeleteAccount } from '../../lib/auth'
 
 const ui = useUiStore()
@@ -249,13 +248,7 @@ async function onOpen(c) {
   localStorage.setItem('utext_active_conv', JSON.stringify({ conversationId: c.conversationId }))
   conv.clearUnread(c.conversationId)
   rememberPartner(c.conversationId, c.partner.id) // WAJIB sebelum loadMessages/subscribe
-  try {
-    room.messages = (await loadMessages(c.conversationId)).map(enrich)
-  } catch (e) {
-    toast.error('Gagal memuat pesan: ' + e.message)
-    console.error('[loadMessages]', e)
-    room.messages = []
-  }
+  room.messages = (await loadMessages(c.conversationId)).map(enrich)
   msgCh?.()
   msgCh = subscribeMessages(c.conversationId, (m) => {
     if (seenMsgIds.has(m.id)) return
@@ -293,8 +286,6 @@ async function onOpen(c) {
   // update last message di list (decrypted)
   const last = room.messages[room.messages.length - 1]
   if (last) conv.setLast(c.conversationId, last.plaintext || 'Foto')
-  // restore draft tersimpan (persistent per chat)
-  try { room.draft = await getDraft(c.conversationId) } catch { room.draft = '' }
   focusComposer()
 }
 
@@ -401,10 +392,9 @@ function setupPresence(cid) {
   }, 5000)
 }
 
-// ---- draft (persistent per chat) ----
+// ---- draft (in-memory per chat) ----
 function onDraft(v) {
   room.draft = v
-  if (activeConv.value) saveDraft(activeConv.value, v) // fire-and-forget
 }
 
 // ---- send (atau simpan edit) ----
@@ -413,7 +403,6 @@ async function onSend() {
   const text = room.draft
   if (!text.trim() || !activeConv.value) return
   room.draft = ''
-  if (activeConv.value) saveDraft(activeConv.value, '') // clear draft pas kirim
   // mode EDIT
   if (editingMsg.value) {
     const m = editingMsg.value
