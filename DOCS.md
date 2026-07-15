@@ -63,7 +63,8 @@ utext/
     └── schema-phase-k.sql  # RPC: soft_delete_account, delete_conversation_for_all
     ├── schema-phase-l.sql  # soft_delete_account: null public_key, display 'Deleted Account'
     ├── schema-phase-m.sql  # reset_my_account: hapus membership lama + clear deleted_at
-    └── schema-phase-n.sql  # setup_done flag + last_seen (online fallback) + RPC
+    ├── schema-phase-n.sql  # setup_done flag + last_seen (online fallback) + RPC
+    └── schema-phase-o.sql  # RLS profiles: izinkan baca user lain (chat list name)
 ```
 
 ---
