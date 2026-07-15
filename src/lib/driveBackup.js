@@ -98,19 +98,37 @@ export async function backupPrivateKey(privateKeyB64) {
   return true
 }
 
-// Restore RAW private key
-export async function restorePrivateKey() {
+// Hapus file backup di Drive (dipakai pas hapus akun -> mulai dari nol)
+export async function deleteDriveBackup() {
   return await authed(async () => {
     const id = await findBackupFile()
-    if (!id) throw new Error('Backup tidak ditemukan di Drive')
-    const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, {
+    if (!id) return true // sudah tidak ada -> anggap sukses
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${id}`, {
+      method: 'DELETE',
       headers: { Authorization: `Bearer ${accessToken}` },
     })
-    if (dl.status === 401) throw new Error('UNAUTH')
-    if (!dl.ok) throw new Error('Download gagal: ' + dl.status)
-    const json = await dl.json()
-    return json.privateKey
-  })
+    if (res.status === 401) throw new Error('UNAUTH')
+    return true
+  }).catch(() => true) // gagal hapus jangan block hapus akun
+}
+
+// Restore RAW private key — return null kalau backup tidak ada (biar ga stuck)
+export async function restorePrivateKey() {
+  try {
+    return await authed(async () => {
+      const id = await findBackupFile()
+      if (!id) return null
+      const dl = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      if (dl.status === 401) throw new Error('UNAUTH')
+      if (!dl.ok) return null
+      const json = await dl.json()
+      return json.privateKey || null
+    })
+  } catch {
+    return null
+  }
 }
 
 // Cek apakah sudah pernah ada backup
