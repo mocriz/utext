@@ -158,16 +158,14 @@ export async function updateAvatar(file) {
 }
 
 // Simpan setup awal (username wajib, display/avatar opsional) + tandai setup_done
-export async function saveSetup({ username, display_name, avatar_file }) {
+export async function saveSetup({ username, display_name, avatar_file, google_name }) {
   const user = await getAuthUser()
   if (!user) throw new Error('belum login')
   if (avatar_file) {
     await updateAvatar(avatar_file)
   }
   // kalau display_name di-skip, pakai nama Google sebagai default
-  const meta = user.user_metadata || {}
-  const googleName = meta.full_name || meta.name || ''
-  const finalDisplay = (display_name && display_name.trim()) || googleName
+  const finalDisplay = (display_name && display_name.trim()) || (google_name || '')
   const patch = { username }
   if (finalDisplay) patch.display_name = finalDisplay
   const { error } = await supabase.from('profiles').update(patch).eq('id', user.id)

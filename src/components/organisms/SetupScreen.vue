@@ -118,6 +118,7 @@ async function start() {
   if (!canStart.value) return
   const payload = { username: username.value }
   if (displayName.value.trim()) payload.display_name = displayName.value.trim()
+  payload.google_name = props.googleName
   if (pendingAvatar.value) payload.avatar = pendingAvatar.value
   emit('done', payload)
 }
