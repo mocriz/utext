@@ -18,7 +18,8 @@ const showApp = computed(() => auth.isReady && auth.isAuthed && auth.identitySta
   <AppShell v-else-if="showApp" />
   <div v-else class="boot">
     <p>Kunci belum tersedia.</p>
-    <button @click="auth.restore()">Restore dari Drive</button>
+    <button v-if="auth.identityStatus === 'need_restore' || auth.identityStatus === 'new'" @click="auth.restore()">Restore dari Drive</button>
+    <button @click="auth.startFresh()" v-if="auth.identityStatus === 'new' || auth.identityStatus === 'need_restore'">Mulai Baru</button>
     <button @click="auth.backup()" v-if="auth.identityStatus === 'new'">Backup Key Baru</button>
   </div>
   <ToastHost />

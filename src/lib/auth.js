@@ -7,11 +7,12 @@ import { generateKeypair } from './crypto'
 import { backupPrivateKey, restorePrivateKey } from './driveBackup'
 
 let session = { userId: null, privateKey: null, publicKey: null }
+export { session }
 const LS_PRIV = 'utext_private_key'
 export const identityStatus = ref(null) // 'ok' | 'need_restore' | 'new'
 
 function loadCachedKey() { try { return localStorage.getItem(LS_PRIV) || null } catch { return null } }
-function cacheKey(k) { try { localStorage.setItem(LS_PRIV, k) } catch {} }
+export function cacheKey(k) { try { localStorage.setItem(LS_PRIV, k) } catch {} }
 function clearKey() { try { localStorage.removeItem(LS_PRIV) } catch {} }
 
 export function getSession() { return session }
@@ -144,10 +145,14 @@ export async function updateAvatar(file) {
   return url
 }
 
-// Soft delete akun: tandai deleted_at (chat lawan tetap bisa dibaca), auth user TIDAK dihapus
+// Soft delete akun: tandai deleted_at (lawan tetap baca chat lama + lihat "Deleted Account"),
+// hapus backup Drive + private key lokal -> daftar ulang (auth user baru) = mulai dari nol
 export async function softDeleteAccount() {
   const { softDeleteAccount: rpc } = await import('./chat')
   await rpc()
+  // hapus backup di Drive biar ga ke-restore ke profil lama
+  try { const { deleteDriveBackup } = await import('./driveBackup'); await deleteDriveBackup() } catch {}
+  clearKey() // hapus private key lokal
 }
 
 export async function logout() {

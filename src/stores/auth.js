@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import {
   loginWithGoogle, getAuthUser, ensureIdentity, logout as authLogout,
   getMyProfile, updateUsername, backupToDrive, restoreFromDrive,
+  cacheKey, session,
 } from '../lib/auth'
 
 export const useAuthStore = defineStore('auth', {
@@ -62,8 +63,23 @@ export const useAuthStore = defineStore('auth', {
     },
     async backup() { return await backupToDrive() },
     async restore() {
-      await restoreFromDrive()
+      const key = await restoreFromDrive()
+      if (!key) { this.identityStatus = 'new'; return } // backup hilang -> mulai baru
+      // simpan key hasil restore ke session + localStorage
+      session.privateKey = key
+      cacheKey(key)
       this.identityStatus = 'ok'
+    },
+    // Mulai dari nol (akun baru / backup hilang): generate keypair baru
+    async startFresh() {
+      try {
+        const r = await ensureIdentity()
+        this.identityStatus = r.status
+        this.profile = await getMyProfile()
+      } catch (e) {
+        this.identityStatus = 'error'
+        console.warn('startFresh:', e.message)
+      }
     },
   },
 })
