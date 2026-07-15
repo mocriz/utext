@@ -88,7 +88,7 @@ defineExpose({ focus: () => ta.value?.focus() })
 </script>
 
 <style scoped>
-.composer { position: relative; display: flex; align-items: flex-end; gap: 8px; padding: 8px 12px; border-top: 1px solid var(--border); background: var(--surface); }
+.composer { position: relative; display: flex; align-items: flex-end; gap: 8px; padding: 8px 12px; padding-bottom: max(8px, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: var(--surface); }
 .composer :deep(.preview) { position: absolute; left: 0; right: 0; bottom: 100%; }
 .reply-bar, .edit-bar {
   position: absolute; left: 0; right: 0; bottom: 100%;

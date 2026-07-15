@@ -599,7 +599,7 @@ const activePartnerOnline = computed(() => room.partnerOnline)
 </script>
 
 <style scoped>
-.shell { display: flex; height: 100vh; overflow: hidden; }
+.shell { display: flex; height: 100vh; height: 100dvh; overflow: hidden; }
 .pane-sidebar { flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--border); min-width: 0; }
 .pane-chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .divider { width: 5px; flex: none; cursor: col-resize; background: transparent; transition: background .15s; }
@@ -607,8 +607,9 @@ const activePartnerOnline = computed(() => room.partnerOnline)
 .empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--muted); gap: 8px; }
 .empty-chat .em { font-size: 48px; }
 @media (max-width: 720px) {
-  .pane-sidebar { width: 100%; }
-  .pane-chat { width: 100%; }
+  /* di mobile, sidebar & chat saling overlay (cuma 1 yg kelihatan via hide-mobile) */
+  .pane-sidebar { width: 100% !important; height: 100%; }
+  .pane-chat { width: 100% !important; height: 100%; }
   .hide-mobile { display: none; }
 }
 </style>

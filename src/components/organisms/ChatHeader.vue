@@ -45,7 +45,8 @@ const lastSeenText = fmt(props.lastSeen)
 <style scoped>
 .chat-header {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; border-bottom: 1px solid var(--border); background: var(--surface);
+  padding: 10px 12px; padding-top: max(10px, env(safe-area-inset-top));
+  border-bottom: 1px solid var(--border); background: var(--surface);
 }
 .back { display: none; }
 .close { display: inline-flex; }
