@@ -20,7 +20,7 @@
       </div>
       <div class="center">uText</div>
       <div class="right">
-        <IconButton name="mdi:magnify" title="Cari" class="search" @click="$emit('open-search')" />
+        <IconButton name="mdi:magnify" title="Cari" class="search hide-mobile-search" @click="$emit('open-search')" />
         <MoreMenu :settings="prefs" @navigate="$emit('navigate', $event)" @logout="$emit('logout')" />
       </div>
     </template>
@@ -61,4 +61,8 @@ watch(() => props.searching, (v) => { if (v) nextTick(() => input.value?.focus()
   background: var(--bg); color: var(--fg); font-size: 14px; outline: none;
 }
 .search-input:focus { border-color: var(--accent); }
+/* di mobile, search di header disembunyikan (dipindah ke FAB floating di AppShell) */
+@media (max-width: 720px) {
+  .hide-mobile-search { display: none; }
+}
 </style>

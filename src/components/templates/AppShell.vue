@@ -22,6 +22,10 @@
         @conv-menu="onConvMenu"
         @pick-user="startChat"
       />
+      <!-- FAB search (mobile only) -->
+      <button class="search-fab hide-desktop" title="Cari" @click="openSearch">
+        <Icon name="mdi:magnify" :size="22" />
+      </button>
     </div>
     <!-- divider resize horizontal (desktop) -->
     <div
@@ -47,7 +51,7 @@
         @bubble-menu="onBubbleMenu"
         @jump="jumpTo"
         @open-media="(src) => (viewerSrc = src)"
-        @update:draft="room.draft = $event"
+        @update:draft="onDraft"
         @typing="onTyping"
         @send="onSend"
         @pick="onPick"
@@ -117,6 +121,7 @@ import {
   getLastSeen, touchLastSeen,
   updateDisplayName as rpcUpdateDisplayName, uploadAvatar, searchUsers, startConversationWith,
 } from '../../lib/chat'
+import { getDraft, saveDraft } from '../../lib/cache'
 import { backupToDrive, restoreFromDrive, updateUsername, getMyProfile, updateDisplayName, updateAvatar, softDeleteAccount } from '../../lib/auth'
 
 const ui = useUiStore()
@@ -168,7 +173,11 @@ function stopResize() {
 }
 
 // fokus ke field text (dipakai pas buka room, balas, edit, & keyboard fisik)
-function focusComposer() { nextTick(() => chatPanel.value?.focus()) }
+// focus composer (desktop auto-focus; mobile biarin keyboard fisik lewat listener, ga paksa focus)
+function focusComposer() {
+  if (window.innerWidth <= 720) return // mobile: jangan paksa keyboard, tapi listener key tetap jalan
+  nextTick(() => chatPanel.value?.focus())
+}
 
 let typingCh = null, presenceCh = null, msgCh = null, typingTimer = null, presenceTimer = null, lastSeen = 0
 const myId = computed(() => auth.user?.id)
@@ -266,6 +275,8 @@ async function onOpen(c) {
   // update last message di list (decrypted)
   const last = room.messages[room.messages.length - 1]
   if (last) conv.setLast(c.conversationId, last.plaintext || 'Foto')
+  // restore draft tersimpan (persistent per chat)
+  try { room.draft = await getDraft(c.conversationId) } catch { room.draft = '' }
   focusComposer()
 }
 
@@ -372,12 +383,19 @@ function setupPresence(cid) {
   }, 5000)
 }
 
+// ---- draft (persistent per chat) ----
+function onDraft(v) {
+  room.draft = v
+  if (activeConv.value) saveDraft(activeConv.value, v) // fire-and-forget
+}
+
 // ---- send (atau simpan edit) ----
 async function onSend() {
   // validasi: harus ada >=1 karakter non-whitespace, tidak melebihi batas
   const text = room.draft
   if (!text.trim() || !activeConv.value) return
   room.draft = ''
+  if (activeConv.value) saveDraft(activeConv.value, '') // clear draft pas kirim
   // mode EDIT
   if (editingMsg.value) {
     const m = editingMsg.value
@@ -626,5 +644,15 @@ const activePartnerOnline = computed(() => room.partnerOnline)
   .pane-sidebar { width: 100% !important; height: 100%; }
   .pane-chat { width: 100% !important; height: 100%; }
   .hide-mobile { display: none; }
+  /* FAB search kanan bawah (desktop disembunyikan) */
+  .hide-desktop { display: none; }
+  .search-fab {
+    display: inline-flex; align-items: center; justify-content: center;
+    position: absolute; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom));
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--accent); color: #fff; border: none; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,.35); z-index: 20;
+  }
+  .search-fab:active { transform: scale(.94); }
 }
 </style>
