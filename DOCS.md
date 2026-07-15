@@ -61,6 +61,8 @@ utext/
     ├── schema-phase-i.sql  # relax search_users ke 1 char
     ├── schema-phase-j.sql  # fix delete_message_for_me (NULL bug)
     └── schema-phase-k.sql  # RPC: soft_delete_account, delete_conversation_for_all
+    ├── schema-phase-l.sql  # soft_delete_account: null public_key, display 'Deleted Account'
+    └── schema-phase-m.sql  # reset_my_account: hapus membership lama + clear deleted_at
 ```
 
 ---
@@ -276,8 +278,13 @@ Static SPA, tidak butuh server. Supabase menangani semua backend.
 - **Lawan:** yang SUDAH pernah chat tetap baca chat lama (public key kita sudah di-cache di client mereka). Yang belum pernah buka → chat lama tidak bisa decrypt (edge case). Lawan lihat nama kita = "Deleted Account".
 
 ### Daftar ulang (email sama)
-- Supabase Google OAuth email sama → **`auth.uid()` SAMA** (bukan user baru). Tapi `public_key` sudah NULL → `ensureIdentity()` branch "user baru" → **generate keypair BARU otomatis** → **mulai dari nol**.
+- Supabase Google OAuth email sama → **`auth.uid()` SAMA** (bukan user baru).
+- `ensureIdentity()` detect (`deleted_at` SET atau `public_key` NULL) → panggil RPC `reset_my_account()`:
+  - **Hapus `conversation_members` kita** → tidak lihat chat lama lagi.
+  - **Clear `deleted_at` + `display_name=''` + `username=NULL` + `public_key=NULL`**.
+  - Generate keypair BARU → **mulai dari nol bersih** (chat kosong, nama kosong, username baru, TIDAK ada label "Deleted Account").
 - Backup Drive sudah dihapus → tidak ke-restore ke profil lama.
+- **Lawan:** tetap pegang membership + messages mereka → tetap baca chat lama. Pas kita daftar ulang, profil kita `deleted_at` cleared → lawan lihat kita sebagai akun baru (nama kosong), chat lama mereka tetap ada.
 
 ### Restore vs Mulai Baru
 - **Restore dari Drive**: `restorePrivateKey()` → file ada → return key → set session + localStorage → `ok`. File hilang → `null` → status `new` (mulai baru).

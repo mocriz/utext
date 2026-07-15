@@ -283,8 +283,16 @@ VITE_GOOGLE_CLIENT_ID=&lt;google client id&gt;.apps.googleusercontent.com</code>
     </ul>
     <h3>Daftar ulang (email sama)</h3>
     <ul>
-      <li>Supabase Google OAuth email sama → <b><code>auth.uid()</code> SAMA</b> (bukan user baru). Tapi <code>public_key</code> sudah NULL → <code>ensureIdentity()</code> branch "user baru" → <b>generate keypair BARU otomatis</b> → <b>mulai dari nol</b>.</li>
+      <li>Supabase Google OAuth email sama → <b><code>auth.uid()</code> SAMA</b> (bukan user baru).</li>
+      <li><code>ensureIdentity()</code> detect (<code>deleted_at</code> SET atau <code>public_key</code> NULL) → panggil RPC <code>reset_my_account()</code>:
+        <ul>
+          <li><b>Hapus <code>conversation_members</code> kita</b> → tidak lihat chat lama lagi.</li>
+          <li><b>Clear <code>deleted_at</code> + <code>display_name=''</code> + <code>username=NULL</code> + <code>public_key=NULL</code></b>.</li>
+          <li>Generate keypair BARU → <b>mulai dari nol bersih</b> (chat kosong, nama kosong, username baru, TIDAK ada label "Deleted Account").</li>
+        </ul>
+      </li>
       <li>Backup Drive sudah dihapus → tidak ke-restore ke profil lama.</li>
+      <li><b>Lawan:</b> tetap pegang membership + messages mereka → tetap baca chat lama. Pas kita daftar ulang, profil kita <code>deleted_at</code> cleared → lawan lihat kita akun baru (nama kosong), chat lama mereka tetap ada.</li>
     </ul>
     <h3>Restore vs Mulai Baru</h3>
     <ul>

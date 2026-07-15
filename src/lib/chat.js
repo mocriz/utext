@@ -360,6 +360,13 @@ export async function softDeleteAccount() {
   if (error) throw error
 }
 
+// Reset total pas daftar ulang (akun yang pernah di-soft-delete):
+// hapus membership lama + clear deleted_at/display/username/public_key
+export async function reset_my_account() {
+  const { error } = await supabase.rpc('reset_my_account')
+  if (error) throw error
+}
+
 // Hapus pesan "untuk saya" -> append user ke deleted_for[]
 export async function deleteMessageForMe(messageId) {
   const { error } = await supabase.rpc('delete_message_for_me', { msg_id: messageId })
