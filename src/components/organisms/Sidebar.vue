@@ -8,8 +8,8 @@
         :user="u"
         @click="$emit('pick-user', u)"
       />
-      <p v-if="query.length >= 1 && !results.length" class="empty">Tidak ada user ditemukan.</p>
-      <p v-else-if="query.length < 1" class="empty">Ketik minimal 1 huruf untuk mencari.</p>
+      <p v-if="query.length >= 1 && !results.length" class="empty">Tidak ada pengguna dengan username tersebut.</p>
+      <p v-else-if="query.length < 1" class="empty">Ketik username untuk mencari orang.</p>
     </div>
 
     <!-- mode normal: daftar percakapan -->
@@ -22,7 +22,7 @@
         @open="$emit('open', c)"
         @menu="(e) => $emit('conv-menu', c, e)"
       />
-      <p v-if="!conversations.length" class="empty">Belum ada percakapan. Cari username di atas.</p>
+      <p v-if="!conversations.length" class="empty">Belum ada percakapan. Cari username di atas untuk mulai mengobrol.</p>
     </div>
   </aside>
 </template>

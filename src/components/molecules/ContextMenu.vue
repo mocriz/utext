@@ -5,7 +5,8 @@
         <button v-for="item in items" :key="item.label"
           class="ci" :class="{ danger: item.danger }"
           @click="act(item)">
-          {{ item.label }}
+          <Icon v-if="item.icon" :name="item.icon" :size="18" />
+          <span>{{ item.label }}</span>
         </button>
       </div>
     </div>
@@ -14,9 +15,10 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import Icon from '../atoms/Icon.vue'
 
 const props = defineProps({
-  // items: [{ label, value, danger? }]
+  // items: [{ label, value, danger?, icon? }]
   items: { type: Array, default: () => [] },
   x: { type: Number, default: 0 },
   y: { type: Number, default: 0 },
@@ -26,7 +28,7 @@ const emit = defineEmits(['select', 'close'])
 const pos = ref({})
 watch(() => props.show, (v) => {
   if (v) {
-    const w = 200, h = props.items.length * 40 + 12
+    const w = 220, h = props.items.length * 44 + 12
     const x = Math.min(props.x, window.innerWidth - w - 8)
     const y = Math.min(props.y, window.innerHeight - h - 8)
     pos.value = { left: x + 'px', top: y + 'px', width: w + 'px' }
@@ -43,9 +45,10 @@ function close() { emit('close') }
   border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
 }
 .ci {
-  display: block; width: 100%; padding: 10px 12px; border: none; background: transparent;
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: none; background: transparent;
   color: var(--fg); font-size: 14px; text-align: left; cursor: pointer; border-radius: var(--radius-sm);
 }
+.ci svg { width: 18px; height: 18px; flex: none; }
 .ci:hover { background: var(--surface-2); }
 .ci.danger { color: var(--danger); }
 </style>

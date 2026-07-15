@@ -57,8 +57,9 @@
         @cancel-edit="cancelEdit"
       />
       <div v-else class="empty-chat">
-        <div class="em">💬</div>
-        <p>Pilih atau cari percakapan untuk mulai.</p>
+        <Icon name="mdi:chat-outline" :size="52" cls="em" />
+        <p class="ec-title">Belum ada percakapan</p>
+        <p class="ec-sub">Pilih dari daftar atau cari username untuk mulai mengobrol.</p>
       </div>
     </div>
 
@@ -104,6 +105,7 @@ import AppHeader from '../organisms/AppHeader.vue'
 import Sidebar from '../organisms/Sidebar.vue'
 import ChatPanel from '../organisms/ChatPanel.vue'
 import ContextMenu from '../molecules/ContextMenu.vue'
+import Icon from '../atoms/Icon.vue'
 import SettingsSheet from '../organisms/SettingsSheet.vue'
 import ConfirmDialog from '../atoms/ConfirmDialog.vue'
 import MediaViewer from '../atoms/MediaViewer.vue'
@@ -230,7 +232,7 @@ async function onOpen(c) {
     seenMsgIds.add(m.id)
     enrich(m)
     room.messages.push(m)
-    conv.setLast(c.conversationId, m.plaintext || '📷 foto')
+    conv.setLast(c.conversationId, m.plaintext || 'Foto')
     // pesan partner masuk -> kita langsung tandai read di LOCAL (optimistic, ga nunggu RPC)
     if (m.senderId !== myId.value) {
       conv.bumpUnread(c.conversationId)
@@ -258,7 +260,7 @@ async function onOpen(c) {
   for (const m of room.messages) if (m.mediaPath) await preload(m)
   // update last message di list (decrypted)
   const last = room.messages[room.messages.length - 1]
-  if (last) conv.setLast(c.conversationId, last.plaintext || '📷 foto')
+  if (last) conv.setLast(c.conversationId, last.plaintext || 'Foto')
   focusComposer()
 }
 
@@ -426,16 +428,16 @@ function onBubbleMenu(m, e) {
   if (mine) {
     // pesan sendiri: bisa hapus untuk semua
     ctx.items = [
-      { label: 'Balas', value: 'reply' },
-      ...(canEdit ? [{ label: 'Edit', value: 'edit' }] : []),
-      { label: 'Hapus untuk saya', value: 'delete_me' },
-      { label: 'Hapus untuk semua', value: 'delete_all', danger: true },
+      { label: 'Balas', value: 'reply', icon: 'mdi:reply-outline' },
+      ...(canEdit ? [{ label: 'Edit', value: 'edit', icon: 'mdi:pencil-outline' }] : []),
+      { label: 'Hapus untuk saya', value: 'delete_me', icon: 'mdi:delete-outline' },
+      { label: 'Hapus untuk semua', value: 'delete_all', danger: true, icon: 'mdi:delete-forever-outline' },
     ]
   } else {
     // pesan lawan: cuma bisa hapus untuk saya
     ctx.items = [
-      { label: 'Balas', value: 'reply' },
-      { label: 'Hapus untuk saya', value: 'delete_me' },
+      { label: 'Balas', value: 'reply', icon: 'mdi:reply-outline' },
+      { label: 'Hapus untuk saya', value: 'delete_me', icon: 'mdi:delete-outline' },
     ]
   }
   showCtx(e)
@@ -443,8 +445,8 @@ function onBubbleMenu(m, e) {
 function onConvMenu(c, e) {
   ctx.target = { type: 'conv', c }
   ctx.items = [
-    { label: 'Hapus untuk saya', value: 'delete_conv_me' },
-    { label: 'Hapus untuk semua', value: 'delete_conv_all', danger: true },
+    { label: 'Hapus untuk saya', value: 'delete_conv_me', icon: 'mdi:delete-outline' },
+    { label: 'Hapus untuk semua', value: 'delete_conv_all', danger: true, icon: 'mdi:delete-forever-outline' },
   ]
   showCtx(e)
 }
@@ -461,13 +463,13 @@ async function onCtxSelect(val) {
     else if (val === 'edit') startEdit(m)
     else if (val === 'delete_me') {
       m._hidden = true
-      try { await deleteMessageForMe(m.id); toast.success('Pesan dihapus untuk Anda') }
-      catch (e) { toast.error('Gagal hapus: ' + e.message) }
+      try { await deleteMessageForMe(m.id); toast.success('Pesan dihapus') }
+      catch (e) { toast.error('Pesan gagal dihapus: ' + e.message) }
     }
     else if (val === 'delete_all') {
       m._deleted = true
-      try { await deleteMessageForAll(m.id, activeConv.value); toast.success('Pesan dihapus untuk semua') }
-      catch (e) { toast.error('Gagal hapus: ' + e.message) }
+      try { await deleteMessageForAll(m.id, activeConv.value); toast.success('Pesan dihapus untuk semua orang') }
+      catch (e) { toast.error('Pesan gagal dihapus: ' + e.message) }
     }
   } else if (t?.type === 'conv') {
     if (val === 'delete_conv_me') {
@@ -475,12 +477,12 @@ async function onCtxSelect(val) {
         await deleteConversation(t.c.conversationId)
         conv.items = conv.items.filter((x) => x.conversationId !== t.c.conversationId)
         if (activeConv.value === t.c.conversationId) closeRoom()
-        toast.success('Percakapan dihapus untuk Anda')
-      } catch (e) { toast.error('Gagal hapus: ' + e.message) }
+        toast.success('Percakapan dihapus')
+      } catch (e) { toast.error('Percakapan gagal dihapus: ' + e.message) }
     } else if (val === 'delete_conv_all') {
       const ok = await confirmDialog.value.open({
         title: 'Hapus untuk semua?',
-        message: 'Percakapan dan semua pesan akan dihapus permanen. Lawan kehilangan semua chat ini.',
+        message: 'Seluruh pesan dihapus permanen untuk kedua belah pihak. Tindakan ini tidak bisa dibatalkan.',
         confirmText: 'Hapus semua',
         danger: true,
       })
@@ -489,7 +491,7 @@ async function onCtxSelect(val) {
         await deleteConversationForAll(t.c.conversationId)
         conv.items = conv.items.filter((x) => x.conversationId !== t.c.conversationId)
         if (activeConv.value === t.c.conversationId) closeRoom()
-        toast.success('Percakapan dihapus untuk semua')
+        toast.success('Percakapan dihapus untuk semua orang')
       } catch (e) { toast.error('Gagal hapus: ' + e.message) }
     }
   }
@@ -500,7 +502,7 @@ function startReply(m) {
     id: m.id,
     mine: m.senderId === myId.value,
     name: m.senderId === myId.value ? 'Anda' : (activePartner.value?.username || activePartner.value?.display_name),
-    text: m.plaintext || '📷 foto',
+    text: m.plaintext || 'Foto',
   }
   focusComposer()
 }
@@ -523,29 +525,29 @@ function onNavigate(target) {
 }
 async function onLogout() { await auth.logout(); location.reload() }
 async function onBackup() {
-  try { await auth.backup(); toast.success('Key dibackup ke Google Drive') }
+  try { await auth.backup(); toast.success('Kunci cadangan tersimpan di Google Drive') }
   catch (e) { toast.error('Backup gagal: ' + e.message) }
 }
 async function onRestore() {
-  try { await auth.restore(); toast.success('Key dipulihkan dari Drive') }
-  catch (e) { toast.error('Restore gagal: ' + e.message) }
+  try { await auth.restore(); toast.success('Kunci dipulihkan dari Google Drive') }
+  catch (e) { toast.error('Pemulihan gagal: ' + e.message) }
 }
 async function onSaveUsername(name) {
-  try { await auth.editUsername(name); await refreshProfile(); toast.success('Username disimpan') }
-  catch (e) { toast.error('Gagal: ' + e.message) }
+  try { await auth.editUsername(name); await refreshProfile(); toast.success('Username diperbarui') }
+  catch (e) { toast.error('Username gagal disimpan: ' + e.message) }
 }
 async function onSaveDisplay(name) {
-  try { await rpcUpdateDisplayName(name); await refreshProfile(); toast.success('Nama tampilan disimpan') }
-  catch (e) { toast.error('Gagal: ' + e.message) }
+  try { await rpcUpdateDisplayName(name); await refreshProfile(); toast.success('Nama tampilan diperbarui') }
+  catch (e) { toast.error('Nama gagal disimpan: ' + e.message) }
 }
 async function onAvatar(file) {
   try { await updateAvatar(file); await refreshProfile(); toast.success('Foto profil diperbarui') }
-  catch (e) { toast.error('Gagal upload: ' + e.message) }
+  catch (e) { toast.error('Foto gagal diunggah: ' + e.message) }
 }
 async function onDeleteAccount() {
   const ok = await confirmDialog.value.open({
     title: 'Hapus akun?',
-    message: 'Chat lawan tetap bisa dibaca. Login Gmail sama bisa kembali.',
+    message: 'Percakapan di sisi lawan tetap tersimpan. Kamu bisa masuk kembali lewat Gmail yang sama.',
     confirmText: 'Hapus akun',
     danger: true,
   })
@@ -554,7 +556,7 @@ async function onDeleteAccount() {
     await softDeleteAccount()
     await auth.logout()
     location.reload()
-  } catch (e) { toast.error('Gagal hapus akun: ' + e.message) }
+  } catch (e) { toast.error('Akun gagal dihapus: ' + e.message) }
 }
 async function refreshProfile() { auth.profile = await getMyProfile() }
 

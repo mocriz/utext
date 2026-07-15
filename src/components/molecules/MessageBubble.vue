@@ -10,7 +10,7 @@
     <!-- reply preview (quote) -->
     <div v-if="replyTo" class="reply-quote" @click="$emit('jump', replyTo)">
       <span class="rq-name">{{ replyTo.mine ? 'Anda' : replyTo.name }}</span>
-      <span class="rq-text">{{ replyTo.text || '📷 foto' }}</span>
+      <span class="rq-text">{{ replyTo.text || 'Foto' }}</span>
     </div>
 
     <div class="bubble" :class="mine ? 'me' : 'them'">
@@ -18,7 +18,7 @@
       <span v-else>{{ text }}</span>
       <span class="meta">
         <span class="time" :title="fullTime">{{ time }}</span>
-        <span v-if="edited" class="edited">·edit</span>
+        <span v-if="edited" class="edited">diedit</span>
         <CheckIcon v-if="mine" :state="receipt" />
       </span>
     </div>

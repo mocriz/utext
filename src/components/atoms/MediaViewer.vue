@@ -1,7 +1,7 @@
 <template>
   <teleport to="body">
     <div v-if="src" class="mv-backdrop" @click="close">
-      <button class="mv-close" @click.stop="close" title="Tutup (Esc)">✕</button>
+      <button class="mv-close" @click.stop="close" title="Tutup (Esc)"><Icon name="mdi:close" :size="22" /></button>
       <div
         class="mv-stage"
         @click.stop
@@ -25,6 +25,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import Icon from './Icon.vue'
 
 const props = defineProps({ src: { type: String, default: '' } })
 const emit = defineEmits(['close'])

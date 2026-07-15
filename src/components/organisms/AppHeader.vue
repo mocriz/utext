@@ -2,7 +2,7 @@
   <header class="app-header" :class="{ searching }">
     <!-- mode search: full-width input -->
     <template v-if="searching">
-      <IconButton icon="✕" title="Tutup cari" class="close-search" @click="$emit('close-search')" />
+      <IconButton name="mdi:close" title="Tutup cari" class="close-search" @click="$emit('close-search')" />
       <input
         ref="input"
         class="search-input"
@@ -20,7 +20,7 @@
       </div>
       <div class="center">uText</div>
       <div class="right">
-        <IconButton icon="⌕" title="Cari" class="search" @click="$emit('open-search')" />
+        <IconButton name="mdi:magnify" title="Cari" class="search" @click="$emit('open-search')" />
         <MoreMenu :settings="prefs" @navigate="$emit('navigate', $event)" @logout="$emit('logout')" />
       </div>
     </template>

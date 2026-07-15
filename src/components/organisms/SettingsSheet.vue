@@ -4,7 +4,7 @@
       <div class="sheet" @click.stop>
         <header class="sh">
           <button class="ic" title="Tutup" @click="$emit('close')">
-            <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            <Icon name="mdi:close" :size="20" />
           </button>
           <span class="title">Pengaturan</span>
         </header>
@@ -13,15 +13,15 @@
           <!-- nav -->
           <nav class="nav">
             <button class="nav-item" :class="{ active: section === 'profile' }" @click="section = 'profile'">
-              <svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4 0-7 2-7 5v1h14v-1c0-3-3-5-7-5z" /></svg>
+              <Icon name="mdi:account-outline" :size="18" />
               <span>Profil</span>
             </button>
             <button class="nav-item" :class="{ active: section === 'appearance' }" @click="section = 'appearance'">
-              <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18c1 0 1.5-1 1.5-2 0-1.5 1-2 2-2H18a3 3 0 003-3c0-5-4-9-9-9zm-4 9a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm0 4a3 3 0 100-6 3 3 0 000 6z" /></svg>
+              <Icon name="mdi:palette-outline" :size="18" />
               <span>Tampilan</span>
             </button>
             <button class="nav-item" :class="{ active: section === 'privacy' }" @click="section = 'privacy'">
-              <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4zm0 6a2 2 0 012 2v1h1v5H9v-5h1v-1a2 2 0 012-2z" /></svg>
+              <Icon name="mdi:shield-outline" :size="18" />
               <span>Privasi &amp; Akun</span>
             </button>
           </nav>
@@ -44,10 +44,10 @@
                   <TextInput v-model="usernameDraft" placeholder="username" @update:model-value="onUsernameType" />
                   <BaseButton size="sm" variant="primary" :disabled="!usernameDraft || saving || usernameStatus === 'taken'" @click="saveUsername">Simpan</BaseButton>
                 </div>
-                <p v-if="usernameStatus === 'checking'" class="hint">mengecek…</p>
-                <p v-else-if="usernameStatus === 'available'" class="ok">✓ tersedia</p>
-                <p v-else-if="usernameStatus === 'taken'" class="err">✗ sudah dipakai</p>
-                <p v-else-if="usernameStatus === 'invalid'" class="err">✗ hanya a-z 0-9 _ (1-30)</p>
+                <p v-if="usernameStatus === 'checking'" class="hint">Memeriksa ketersediaan…</p>
+                <p v-else-if="usernameStatus === 'available'" class="ok">Username tersedia</p>
+                <p v-else-if="usernameStatus === 'taken'" class="err">Username sudah digunakan</p>
+                <p v-else-if="usernameStatus === 'invalid'" class="err">Hanya huruf kecil, angka, dan garis bawah (1-30 karakter)</p>
                 <p v-else-if="usernameErr" class="err">{{ usernameErr }}</p>
               </div>
 
@@ -62,14 +62,13 @@
                 <div class="inline">
                   <input ref="avatarInput" type="file" accept="image/*" hidden @change="onAvatar" />
                   <BaseButton size="sm" variant="subtle" @click="avatarInput?.click()">Pilih foto</BaseButton>
-                  <span class="muted small">{{ avatarName || 'default dari Google' }}</span>
+                  <span class="muted small">{{ avatarName || 'Foto default dari Google' }}</span>
                 </div>
               </div>
 
               <div class="field">
                 <label>Password</label>
-                <TextInput model-value="" type="password" disabled placeholder="••••••••" />
-                <p class="muted small">Akun login via Google — password diatur di akun Google.</p>
+                <p class="muted small">Akun masuk lewat Google, jadi kata sandi dikelola di akun Google masing-masing.</p>
               </div>
             </section>
 
@@ -101,12 +100,12 @@
               <div class="field">
                 <label>Backup &amp; Restore</label>
                 <div class="row">
-                  <span class="muted small">Simpan private key ke Google Drive (cross-device)</span>
+                  <p class="muted small">Simpan kunci rahasia ke Google Drive agar bisa dipulihkan dari perangkat lain.</p>
                   <BaseButton size="sm" variant="subtle" :disabled="backing" @click="$emit('backup')">Backup</BaseButton>
                 </div>
                 <div class="row" v-if="identityStatus === 'need_restore' || identityStatus === 'new'">
-                  <span class="muted small">Pulihkan key dari Drive</span>
-                  <BaseButton size="sm" variant="subtle" :disabled="backing" @click="$emit('restore')">Restore</BaseButton>
+                  <span class="muted small">Pulihkan kunci dari Google Drive</span>
+                  <BaseButton size="sm" variant="subtle" :disabled="backing" @click="$emit('restore')">Pulihkan</BaseButton>
                 </div>
               </div>
 
@@ -128,7 +127,7 @@
 
               <div class="field danger-zone">
                 <label>Hapus akun</label>
-                <p class="muted small">Soft delete — chat lawan tetap bisa dibaca, login Gmail sama bisa kembali.</p>
+                <p class="muted small">Hapus akun (soft delete). Percakapan di sisi lawan tetap tersimpan, dan kamu bisa masuk kembali lewat Gmail yang sama.</p>
                 <BaseButton variant="danger" :disabled="deleting" @click="confirmDelete">Hapus akun</BaseButton>
               </div>
             </section>
@@ -145,6 +144,7 @@ import Avatar from '../atoms/Avatar.vue'
 import TextInput from '../atoms/TextInput.vue'
 import BaseButton from '../atoms/BaseButton.vue'
 import Toggle from '../atoms/Toggle.vue'
+import Icon from '../atoms/Icon.vue'
 import { useThemeStore } from '../../stores/theme'
 import { isUsernameAvailable } from '../../lib/auth'
 import { useToastStore } from '../../stores/toast'

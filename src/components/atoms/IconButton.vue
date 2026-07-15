@@ -1,17 +1,24 @@
 <template>
   <button class="icon-btn" :class="size" :title="title" :type="type" @click="$emit('click', $event)">
-    <slot>{{ icon }}</slot>
+    <Icon v-if="name" :name="name" :size="iconSize" />
+    <slot v-else>{{ icon }}</slot>
   </button>
 </template>
 
 <script setup>
+import Icon from './Icon.vue'
+
 defineProps({
   icon: { type: String, default: '' },
+  name: { type: String, default: '' }, // iconify name, misal 'mdi:close'
   title: { type: String, default: '' },
   size: { type: String, default: 'md' }, // sm | md | lg
   type: { type: String, default: 'button' },
 })
 defineEmits(['click'])
+
+const sizes = { sm: 16, md: 20, lg: 24 }
+const iconSize = sizes['md']
 </script>
 
 <style scoped>

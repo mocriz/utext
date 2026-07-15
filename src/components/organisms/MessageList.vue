@@ -16,7 +16,7 @@
         @open-media="(src) => $emit('open-media', src)"
       />
     </template>
-    <div v-if="!messages.length" class="hint">Belum ada pesan — kirim untuk mulai.</div>
+    <div v-if="!messages.length" class="hint">Belum ada pesan. Kirim untuk memulai percakapan.</div>
   </div>
 </template>
 
@@ -41,7 +41,7 @@ function resolveReply(m) {
     id: orig.id,
     mine: orig.senderId === props.meId,
     name: orig.senderId === props.meId ? 'Anda' : (orig._partnerName || ''),
-    text: orig.plaintext || '📷 foto',
+    text: orig.plaintext || 'Foto',
   }
 }
 

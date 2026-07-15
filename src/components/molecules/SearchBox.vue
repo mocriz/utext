@@ -7,7 +7,7 @@
       @input="$emit('search', $event)"
       @enter="$emit('search', $event)"
     >
-      <template #prefix>🔍</template>
+      <template #prefix><Icon name="mdi:magnify" :size="18" /></template>
     </TextInput>
     <ul v-if="results.length" class="results">
       <li v-for="u in results" :key="u.id" @click="$emit('pick', u)">
@@ -21,6 +21,7 @@
 <script setup>
 import TextInput from '../atoms/TextInput.vue'
 import Avatar from '../atoms/Avatar.vue'
+import Icon from '../atoms/Icon.vue'
 
 defineProps({
   modelValue: { type: String, default: '' },

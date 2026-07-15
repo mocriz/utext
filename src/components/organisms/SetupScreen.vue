@@ -21,7 +21,7 @@
       <div class="field">
         <label>Nama tampilan <span class="opt">(opsional)</span></label>
         <TextInput v-model="displayName" :placeholder="googleName || 'Nama tampilan'" />
-        <p class="muted small">Kosongkan = pakai nama Google: {{ googleName || '-' }}</p>
+        <p class="muted small">Kosongkan untuk menggunakan nama Google: {{ googleName || '-' }}</p>
       </div>
 
       <!-- Username (wajib) -->
@@ -30,10 +30,10 @@
         <div class="inline">
           <TextInput v-model="username" placeholder="username" @update:model-value="onUsernameType" />
         </div>
-        <p v-if="usernameStatus === 'checking'" class="hint">mengecek…</p>
-        <p v-else-if="usernameStatus === 'available'" class="ok">✓ tersedia</p>
-        <p v-else-if="usernameStatus === 'taken'" class="err">✗ sudah dipakai</p>
-        <p v-else-if="usernameStatus === 'invalid'" class="err">✗ hanya a-z 0-9 _ (1-30)</p>
+        <p v-if="usernameStatus === 'checking'" class="hint">Memeriksa ketersediaan…</p>
+        <p v-else-if="usernameStatus === 'available'" class="ok">Username tersedia</p>
+        <p v-else-if="usernameStatus === 'taken'" class="err">Username sudah digunakan</p>
+        <p v-else-if="usernameStatus === 'invalid'" class="err">Hanya huruf kecil, angka, dan garis bawah (1-30 karakter)</p>
         <p v-else-if="usernameErr" class="err">{{ usernameErr }}</p>
       </div>
 
@@ -41,9 +41,9 @@
       <div class="field">
         <label>Backup Key ke Drive <span class="req">*</span></label>
         <div class="row">
-          <span class="muted small">Wajib — simpan private key ke Google Drive (cross-device).</span>
+          <span class="muted small">Wajib diisi — simpan kunci rahasia ke Google Drive agar bisa dipulihkan di perangkat lain.</span>
           <BaseButton size="sm" variant="subtle" :disabled="backing" @click="onBackup">
-            {{ backedUp ? '✓ Backed up' : 'Backup' }}
+            {{ backedUp ? 'Tersimpan' : 'Backup' }}
           </BaseButton>
         </div>
         <p v-if="backupErr" class="err">{{ backupErr }}</p>

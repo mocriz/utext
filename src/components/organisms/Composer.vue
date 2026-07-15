@@ -4,19 +4,19 @@
     <div v-if="replyTo" class="reply-bar">
       <div class="rb-text">
         <span class="rb-name">{{ replyTo.mine ? 'Balas ke diri sendiri' : 'Balas: ' + replyTo.name }}</span>
-        <span class="rb-preview">{{ replyTo.text || '📷 foto' }}</span>
+        <span class="rb-preview">{{ replyTo.text || 'Foto' }}</span>
       </div>
-      <IconButton icon="✕" title="Batal balas" @click="$emit('cancel-reply')" />
+      <IconButton name="mdi:close" title="Batal balas" @click="$emit('cancel-reply')" />
     </div>
 
     <!-- edit bar -->
     <div v-if="editing" class="edit-bar">
       <span class="eb-label">Edit pesan</span>
-      <IconButton icon="✕" title="Batal edit" @click="$emit('cancel-edit')" />
+      <IconButton name="mdi:close" title="Batal edit" @click="$emit('cancel-edit')" />
     </div>
 
     <input ref="fileInput" type="file" accept="image/*" hidden @change="$emit('pick', $event)" />
-    <IconButton icon="📷" title="Kirim foto" @click="fileInput?.click()" />
+    <IconButton name="mdi:image-outline" title="Kirim foto" @click="fileInput?.click()" />
     <TextInput
       ref="ti"
       :model-value="draft"
