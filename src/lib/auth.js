@@ -79,11 +79,11 @@ export async function backupToDrive() {
 }
 
 // Tombol "Restore dari Drive" (user gesture -> popup allowed)
+// return privateKey (atau null kalau backup hilang) biar store bisa set session
 export async function restoreFromDrive() {
   const key = await restorePrivateKey()
-  session.privateKey = key
-  cacheKey(key)
-  return true
+  if (key) { session.privateKey = key; cacheKey(key) }
+  return key // string | null
 }
 
 async function generateUniqueUsername() {

@@ -255,12 +255,42 @@ Static SPA, tidak butuh server. Supabase menangani semua backend.
 - E2EE end-to-end: Supabase hanya simpan ciphertext. Admin (kamu) TIDAK bisa baca isi chat.
 - Private key di localStorage (same-device) + Drive backup. Siapa pun yg akses device/browser bisa baca chat.
 - Free tier Supabase: 500MB DB, 1GB storage, 2 projek. Cukup untuk personal.
-- Soft-delete: akun di-flag `deleted_at`, chat lama tetap bisa dibaca lawan. Login Gmail sama bisa kembali.
+- Soft-delete: akun di-flag `deleted_at`, chat lama tetap bisa dibaca lawan (yang sudah pernah chat). Login Gmail sama → mulai dari nol (public_key di-null).
 - Tidak ada rate-limit ketat di sisi app; andalkan Supabase anon key + RLS (pastikan RLS aktif di semua table).
 
 ---
 
-## 13. Kontak / Referensi
+## 13. Account Lifecycle (create / delete / restore)
+
+### Create akun
+1. Login Google OAuth → Supabase bikin `auth.users` (id = `auth.uid()`).
+2. `ensureIdentity()` cek `profiles.public_key`:
+   - **NULL** → user baru: generate keypair X25519, simpan `public_key`, generate `username` random (`user_xxx`), cache `private_key` localStorage. Status: `new` (minta backup Drive).
+   - **ada** → user lama: pakai `public_key` profil, cari `private_key` localStorage. Ada → `ok`. Tidak → `need_restore` (tombol Restore dari Drive).
+
+### Hapus akun (reset identitas)
+`softDeleteAccount()` (RPC `soft_delete_account` + hapus backup):
+- `profiles.deleted_at = now()`, `display_name = 'Deleted Account'`, `username = NULL`, `key_backed_up = false`, **`public_key = NULL`**.
+- Hapus file backup di Drive (`deleteDriveBackup()`).
+- Hapus `private_key` lokal (`clearKey()`).
+- **Lawan:** yang SUDAH pernah chat tetap baca chat lama (public key kita sudah di-cache di client mereka). Yang belum pernah buka → chat lama tidak bisa decrypt (edge case). Lawan lihat nama kita = "Deleted Account".
+
+### Daftar ulang (email sama)
+- Supabase Google OAuth email sama → **`auth.uid()` SAMA** (bukan user baru). Tapi `public_key` sudah NULL → `ensureIdentity()` branch "user baru" → **generate keypair BARU otomatis** → **mulai dari nol**.
+- Backup Drive sudah dihapus → tidak ke-restore ke profil lama.
+
+### Restore vs Mulai Baru
+- **Restore dari Drive**: `restorePrivateKey()` → file ada → return key → set session + localStorage → `ok`. File hilang → `null` → status `new` (mulai baru).
+- **Mulai Baru** (tombol fallback): `startFresh()` → `ensureIdentity()` → generate keypair baru (jalan karena `public_key` NULL).
+- **Stuck prevention**: `restorePrivateKey()` return `null` (bukan throw) kalau backup hilang → tidak stuck.
+
+### Catatan penting
+- Jangan pertahankan `public_key` saat delete — kalau dipertahankan, `ensureIdentity` balik ke branch "user lama" → loop `need_restore` (bug). Null-kan agar daftar ulang = user baru otomatis.
+- `restoreFromDrive()` return **privateKey** (bukan `true`).
+
+---
+
+## 14. Kontak / Referensi
 
 - Repo: https://github.com/mocriz/utext
 - Supabase: https://sgmiqkqigfmwgiajaqvo.supabase.co

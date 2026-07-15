@@ -86,6 +86,7 @@
     <a href="#trouble" class="navlink">Troubleshooting</a>
     <a href="#maint" class="navlink">Maintenance</a>
     <a href="#sec" class="navlink">Keamanan</a>
+    <a href="#lifecycle" class="navlink">Account Lifecycle</a>
   </nav>
 
   <main class="content">
@@ -254,12 +255,44 @@ VITE_GOOGLE_CLIENT_ID=&lt;google client id&gt;.apps.googleusercontent.com</code>
 
     <h2 id="sec">12. Keamanan & Limitasi</h2>
     <ul>
-      <li>E2EE: Supabase hanya simpan ciphertext. Admin TIDAK bisa baca isi chat.</li>
-      <li>Private key di localStorage (same-device) + Drive. Siapa akses device → bisa baca chat.</li>
+      <li>E2EE end-to-end: Supabase hanya simpan ciphertext. Admin TIDAK bisa baca isi chat.</li>
+      <li>Private key di localStorage (same-device) + Drive backup. Siapa akses device → bisa baca chat.</li>
       <li>Free tier: 500MB DB, 1GB storage. Cukup personal.</li>
-      <li>Soft-delete: akun di-flag, chat lama tetap bisa dibaca lawan. Login Gmail bisa kembali.</li>
+      <li>Soft-delete: akun di-flag <code>deleted_at</code>, chat lama tetap bisa dibaca lawan (yang sudah pernah chat). Login Gmail sama → mulai dari nol (<code>public_key</code> di-null).</li>
       <li>Pastikan RLS aktif di semua table.</li>
     </ul>
+
+    <h2 id="lifecycle">13. Account Lifecycle (create / delete / restore)</h2>
+    <h3>Create akun</h3>
+    <ul>
+      <li>Login Google OAuth → Supabase bikin <code>auth.users</code> (id = <code>auth.uid()</code>).</li>
+      <li><code>ensureIdentity()</code> cek <code>profiles.public_key</code>:
+        <ul>
+          <li><b>NULL</b> → user baru: generate keypair X25519, simpan <code>public_key</code>, generate <code>username</code> random, cache <code>private_key</code> localStorage. Status: <code>new</code>.</li>
+          <li><b>ada</b> → user lama: pakai <code>public_key</code>, cari <code>private_key</code> localStorage. Ada → <code>ok</code>. Tidak → <code>need_restore</code>.</li>
+        </ul>
+      </li>
+    </ul>
+    <h3>Hapus akun (reset identitas)</h3>
+    <p><code>softDeleteAccount()</code> (RPC <code>soft_delete_account</code> + hapus backup):</p>
+    <ul>
+      <li><code>deleted_at = now()</code>, <code>display_name = 'Deleted Account'</code>, <code>username = NULL</code>, <code>key_backed_up = false</code>, <b><code>public_key = NULL</code></b>.</li>
+      <li>Hapus file backup di Drive (<code>deleteDriveBackup()</code>).</li>
+      <li>Hapus <code>private_key</code> lokal (<code>clearKey()</code>).</li>
+      <li><b>Lawan:</b> yang SUDAH pernah chat tetap baca chat lama (public key kita sudah di-cache di client mereka). Yang belum pernah buka → chat lama tidak bisa decrypt (edge case). Lawan lihat nama kita = "Deleted Account".</li>
+    </ul>
+    <h3>Daftar ulang (email sama)</h3>
+    <ul>
+      <li>Supabase Google OAuth email sama → <b><code>auth.uid()</code> SAMA</b> (bukan user baru). Tapi <code>public_key</code> sudah NULL → <code>ensureIdentity()</code> branch "user baru" → <b>generate keypair BARU otomatis</b> → <b>mulai dari nol</b>.</li>
+      <li>Backup Drive sudah dihapus → tidak ke-restore ke profil lama.</li>
+    </ul>
+    <h3>Restore vs Mulai Baru</h3>
+    <ul>
+      <li><b>Restore dari Drive:</b> <code>restorePrivateKey()</code> → file ada → return key → <code>ok</code>. File hilang → <code>null</code> → status <code>new</code>.</li>
+      <li><b>Mulai Baru</b> (tombol fallback): <code>startFresh()</code> → <code>ensureIdentity()</code> → generate keypair baru (jalan karena <code>public_key</code> NULL).</li>
+      <li><b>Stuck prevention:</b> <code>restorePrivateKey()</code> return <code>null</code> (bukan throw) kalau backup hilang → tidak stuck.</li>
+    </ul>
+    <div class="note danger"><b>Penting:</b> JANGAN pertahankan <code>public_key</code> saat delete — kalau dipertahankan, <code>ensureIdentity</code> balik ke branch "user lama" → loop <code>need_restore</code> (bug). Null-kan agar daftar ulang = user baru otomatis. <code>restoreFromDrive()</code> return <b>privateKey</b> (bukan <code>true</code>).</div>
 
     <div class="note">Referensi: repo <code>github.com/mocriz/utext</code> · Supabase <code>sgmiqkqigfmwgiajaqvo.supabase.co</code> · Drive backup <code>utext-key.backup.json</code> (root). LocalStorage: <code>utext_private_key</code>, <code>utext_drive_token</code>, <code>utext_sidebar_w</code>, <code>utext_avatar_cache</code>.</div>
   </main>
