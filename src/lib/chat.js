@@ -91,40 +91,58 @@ export async function findExistingConversation(targetUserId) {
   return shared?.[0]?.conversation_id || null
 }
 
-// Load pesan lama (decrypt semua)
+// Load pesan lama (decrypt semua) — cache dulu (offline/instant), lalu sync server
+import {
+  cacheMessages, getCachedMessages, cacheMessage, deleteCachedMessage, clearAllCache,
+} from './cache'
+
 export async function loadMessages(conversationId) {
-  const { data, error } = await supabase
-    .from('messages')
-    .select('*')
-    .eq('conversation_id', conversationId)
-    .order('created_at', { ascending: true })
-  if (error) throw error
   const me = getSession().userId
-  // filter: pesan yg dihapus "untuk semua", atau dihapus "untuk saya" (deleted_for[] mengandung kita)
-  const visible = (data || []).filter((m) => {
+  // 1) cache lokal dulu (langsung tampil, jalan offline)
+  let cached = []
+  try { cached = await getCachedMessages(conversationId) } catch {}
+  const cachedMap = new Map(cached.map((m) => [m.id, m]))
+
+  // 2) fetch dari server (sync pesan baru / perubahan)
+  let data = []
+  try {
+    const { data: d, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true })
+    if (!error) data = d || []
+  } catch { /* offline: pakai cache */ }
+
+  const visible = data.filter((m) => {
     if (m.deleted_for_all) return false
     if (Array.isArray(m.deleted_for) && m.deleted_for.includes(me)) return false
     return true
   })
-  const ss = await sharedSecretWith(partnerOf(conversationId))
-  return await Promise.all(
-    visible.map(async (m) => {
-      const plaintext = m.ciphertext
-        ? await decryptText(ss, m.ciphertext, m.nonce)
-        : null
+
+  let out = []
+  try {
+    const ss = await sharedSecretWith(partnerOf(conversationId))
+    out = await Promise.all(visible.map(async (m) => {
+      const plaintext = m.ciphertext ? await decryptText(ss, m.ciphertext, m.nonce) : null
       return {
-        id: m.id,
-        senderId: m.sender_id,
-        plaintext,
-        createdAt: m.created_at,
-        mediaPath: m.media_path,
-        media_iv: m.media_iv,
-        media_type: m.media_type,
-        reply_to: m.reply_to || null,
-        edited_at: m.edited_at || null,
+        id: m.id, senderId: m.sender_id, plaintext, createdAt: m.created_at,
+        mediaPath: m.media_path, media_iv: m.media_iv, media_type: m.media_type,
+        reply_to: m.reply_to || null, edited_at: m.edited_at || null, conversationId,
       }
-    })
-  )
+    }))
+  } catch (e) {
+    console.warn('decrypt gagal, pakai cache:', e.message)
+  }
+
+  // 3) tulis ke cache (server punya otoritas penuh)
+  try { await cacheMessages(conversationId, out) } catch {}
+
+  // 4) kalau server kosong (offline/error) tapi cache ada -> pakai cache
+  if (!out.length && cached.length) {
+    return cached.map((m) => ({ ...m, edited: !!m.edited_at }))
+  }
+  return out
 }
 
 // partner id per conversation (cache dari listConversations)
@@ -147,8 +165,17 @@ export async function sendText(conversationId, partnerId, text, replyTo = null) 
     nonce,
   }
   if (replyTo) insertObj.reply_to = replyTo
-  const { error } = await supabase.from('messages').insert(insertObj)
+  const { data, error } = await supabase.from('messages').insert(insertObj).select('id, created_at').single()
   if (error) throw error
+  // cache optimistic (biar muncul & persist walau offline)
+  try {
+    await cacheMessage({
+      id: data.id, senderId: getSession().userId, plaintext: text, createdAt: data.created_at,
+      ciphertext, nonce, mediaPath: null, media_iv: null, media_type: null,
+      reply_to: replyTo || null, edited_at: null, conversationId,
+    })
+  } catch {}
+  return { id: data.id, createdAt: data.created_at }
 }
 
 // Edit pesan milik sendiri (maks 10 menit) — re-encrypt + set edited_at
@@ -161,6 +188,10 @@ export async function editMessage(messageId, partnerId, newText) {
     .eq('id', messageId)
     .eq('sender_id', getSession().userId)
   if (error) throw error
+  try {
+    const existing = await getCachedMessage(messageId)
+    if (existing) { existing.plaintext = newText; existing.ciphertext = ciphertext; existing.nonce = nonce; existing.edited_at = new Date().toISOString(); await cacheMessage(existing) }
+  } catch {}
 }
 
 // Kirim foto terenkripsi (upload ke Storage bucket 'media')
@@ -212,16 +243,13 @@ export function subscribeMessages(conversationId, onNew, onUpdate) {
         try {
           const ss = await sharedSecretWith(partnerOf(conversationId))
           const plaintext = m.ciphertext ? await decryptText(ss, m.ciphertext, m.nonce) : null
-          onNew({
-            id: m.id,
-            senderId: m.sender_id,
-            plaintext,
-            mediaPath: m.media_path,
-            media_iv: m.media_iv,
-            media_type: m.media_type,
-            reply_to: m.reply_to || null,
-            createdAt: m.created_at,
-          })
+          const row = {
+            id: m.id, senderId: m.sender_id, plaintext,
+            mediaPath: m.media_path, media_iv: m.media_iv, media_type: m.media_type,
+            reply_to: m.reply_to || null, createdAt: m.created_at, conversationId,
+          }
+          onNew(row)
+          try { await cacheMessage(row) } catch {}
         } catch (e) {
           console.warn('decrypt gagal:', e.message)
         }
@@ -232,8 +260,8 @@ export function subscribeMessages(conversationId, onNew, onUpdate) {
       { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${conversationId}` },
       (payload) => {
         const m = payload.new
-        // pesan dihapus untuk semua -> hide realtime
-        if (m.deleted_for_all) onUpdate?.({ id: m.id, deleted: true })
+        // pesan dihapus untuk semua -> hide realtime + hapus cache
+        if (m.deleted_for_all) { onUpdate?.({ id: m.id, deleted: true }); try { deleteCachedMessage(m.id) } catch {} }
       }
     )
     .subscribe((status) => {
@@ -344,6 +372,7 @@ export async function deleteConversation(conversationId) {
     .eq('conversation_id', conversationId)
     .eq('user_id', getSession().userId)
   if (error) throw error
+  try { await clearConvCache(conversationId) } catch {}
 }
 
 // Hapus percakapan "untuk semua" (hapus pesan + members + conversation -> lawan kehilangan semua)
@@ -363,12 +392,15 @@ export async function softDeleteAccount() {
 export async function reset_my_account() {
   const { error } = await supabase.rpc('reset_my_account')
   if (error) throw error
+  // kosongin semua cache chat (mulai dari nol)
+  try { await clearAllCache() } catch {}
 }
 
 // Hapus pesan "untuk saya" -> append user ke deleted_for[]
 export async function deleteMessageForMe(messageId) {
   const { error } = await supabase.rpc('delete_message_for_me', { msg_id: messageId })
   if (error) throw error
+  try { await deleteCachedMessage(messageId) } catch {}
 }
 
 // Hapus pesan "untuk semua" (hanya sender) -> set deleted_for_all
@@ -380,6 +412,7 @@ export async function deleteMessageForAll(messageId, conversationId) {
     .eq('conversation_id', conversationId)
     .eq('sender_id', getSession().userId)
   if (error) throw error
+  try { await deleteCachedMessage(messageId) } catch {}
 }
 
 // Tandai pesan partner sebagai delivered (pas kita subscribe/online)

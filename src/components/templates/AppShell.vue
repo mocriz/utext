@@ -125,6 +125,7 @@ import {
   getLastSeen, touchLastSeen,
   updateDisplayName as rpcUpdateDisplayName, uploadAvatar, searchUsers, startConversationWith,
 } from '../../lib/chat'
+import { getDraft, saveDraft } from '../../lib/cache'
 import { backupToDrive, restoreFromDrive, updateUsername, getMyProfile, updateDisplayName, updateAvatar, softDeleteAccount } from '../../lib/auth'
 
 const ui = useUiStore()
@@ -286,6 +287,8 @@ async function onOpen(c) {
   // update last message di list (decrypted)
   const last = room.messages[room.messages.length - 1]
   if (last) conv.setLast(c.conversationId, last.plaintext || 'Foto')
+  // restore draft tersimpan (persistent per chat)
+  try { room.draft = await getDraft(c.conversationId) } catch { room.draft = '' }
   focusComposer()
 }
 
@@ -392,9 +395,10 @@ function setupPresence(cid) {
   }, 5000)
 }
 
-// ---- draft (in-memory per chat) ----
+// ---- draft (persistent per chat) ----
 function onDraft(v) {
   room.draft = v
+  if (activeConv.value) saveDraft(activeConv.value, v) // fire-and-forget
 }
 
 // ---- send (atau simpan edit) ----
@@ -403,6 +407,7 @@ async function onSend() {
   const text = room.draft
   if (!text.trim() || !activeConv.value) return
   room.draft = ''
+  if (activeConv.value) saveDraft(activeConv.value, '') // clear draft pas kirim
   // mode EDIT
   if (editingMsg.value) {
     const m = editingMsg.value
