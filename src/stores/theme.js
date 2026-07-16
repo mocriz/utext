@@ -1,7 +1,7 @@
 // src/stores/theme.js
 import { defineStore } from 'pinia'
 
-const PRESETS = ['default', 'midnight', 'solar', 'rose', 'mono', 'ocean', 'forest', 'lavender', 'sunset', 'nord']
+const PRESETS = ['default', 'nord', 'ocean', 'mono']
 
 // wallpaper chat: none | dots | scribble | grid | waves
 const WALLPAPERS = ['none', 'dots', 'scribble', 'grid', 'waves']

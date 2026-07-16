@@ -83,8 +83,10 @@
               </div>
               <div class="field">
                 <label>Preset</label>
-                <div class="chips">
-                  <button v-for="p in theme.presets" :key="p" class="chip" :class="{ active: theme.preset === p && !theme.custom }" @click="theme.setPreset(p)">{{ p }}</button>
+                <div class="inline">
+                  <select class="select" :value="theme.custom ? '' : theme.preset" @change="theme.setPreset($event.target.value)">
+                    <option v-for="p in theme.presets" :key="p" :value="p" :selected="theme.preset === p && !theme.custom">{{ p }}</option>
+                  </select>
                 </div>
               </div>
               <div class="field">
@@ -255,6 +257,8 @@ function confirmDelete() { emit('delete-account') }
 .chip.active { border-color: var(--accent); color: var(--accent); font-weight: 700; }
 .swatch { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
 .swatch input { width: 32px; height: 32px; border: none; background: none; cursor: pointer; }
+.select { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); color: var(--fg); font-size: 14px; cursor: pointer; max-height: 200px; min-width: 160px; }
+.select:focus { border-color: var(--accent); }
 .danger-zone { padding: 16px; border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent); border-radius: var(--radius); display: flex; flex-direction: column; gap: 8px; }
 @media (max-width: 600px) {
   .body { flex-direction: column; }
