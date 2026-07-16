@@ -94,16 +94,51 @@ end;
 $$;
 grant execute on function public.ensure_bot_conversation() to authenticated;
 
+-- 5) Trigger: pas INSERT di public.messages -> POST ke Edge Function bot-reply (async via pg_net).
+--    pg_net harus ENABLED (Dashboard > Extensions > pg_net). Webhook UI gak ada di plan ini,
+--    jadi kita pakai trigger + pg_net langsung (pattern yg sama persis dgn Database Webhooks).
+--    Guard echo loop ada di dalam function (sender_id = bot -> skip).
+create or replace function public.notify_bot_on_message()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- jangan panggil function kalau yg insert adalah bot sendiri (anti echo loop di level trigger)
+  if NEW.sender_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' then
+    return null;
+  end if;
+  perform net.http_post(
+    url := 'https://sgmiqkqigfmwgiajaqvo.functions.supabase.co/bot-reply',
+    body := json_build_object('record', row_to_json(NEW))::text,
+    headers := '{"Content-Type":"application/json"}'::jsonb,
+    timeout_milliseconds := 1000
+  );
+  return null;
+exception when others then
+  -- jangan gagalkan INSERT kalau HTTP call gagal
+  return null;
+end;
+$$;
+
+drop trigger if exists messages_after_insert_call_bot on public.messages;
+create trigger messages_after_insert_call_bot
+  after insert on public.messages
+  for each row
+  execute function public.notify_bot_on_message();
+
 -- ============================================================
 -- SETELAH SQL INI:
---  A) Dashboard > Edge Functions > Secrets, tambah:
+--  A) Dashboard > Extensions > ENABLE "pg_net" (kalau belum aktif)
+--  B) Dashboard > Edge Functions > Secrets, tambah:
 --       BOT_PRIVATE_KEY = 9tGVLx8xyDa7GazbTeau7TK9v1fNjjjcc8D0sEndyjM
 --       BOT_USER_ID     = bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb
---  B) UPDATE public.bot_config SET openrouter_api_key = 'sk-or-xxx' WHERE id=1;
---  C) Ganti model kalau mau:
+--  C) UPDATE public.bot_config SET openrouter_api_key = 'sk-or-xxx' WHERE id=1;
+--  D) Ganti model kalau mau:
 --       UPDATE public.bot_config SET openrouter_model = 'openai/gpt-4o-mini' WHERE id=1;
---  D) Dashboard > Database > Webhooks:
---       table=public.messages, events=INSERT, type=HTTP Request,
---       Edge Function=bot-reply
---  E) Frontend: panggil ensure_bot_conversation() pas load (sudah di-handle di AppShell)
+--  E) Deploy Edge Function (CLI atau Dashboard):
+--       supabase functions deploy bot-reply
+--  F) Frontend udah panggil ensure_bot_conversation pas load -> bot muncul di list.
+--     Trigger di atas yg otomatis panggil bot-reply tiap lu kirim pesan ke bot.
 -- ============================================================
