@@ -251,9 +251,21 @@ function confirmDelete() { emit('delete-account') }
 .hint { color: var(--muted); font-size: 12px; }
 .ok { color: #16a34a; font-size: 12px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.scroll-x { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.scroll-x {
+  flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px;
+  scrollbar-width: thin; scrollbar-color: var(--muted) transparent;
+  scroll-behavior: smooth; -webkit-overflow-scrolling: touch; touch-action: pan-x;
+}
 .scroll-x::-webkit-scrollbar { height: 6px; }
-.scroll-x::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.scroll-x::-webkit-scrollbar-track { background: transparent; }
+.scroll-x::-webkit-scrollbar-thumb {
+  background: var(--muted); border-radius: 99px;
+  border: 2px solid transparent; background-clip: padding-box;
+}
+.scroll-x::-webkit-scrollbar-thumb:hover { background: var(--accent); background-clip: padding-box; }
+/* auto-hide: sembunyiin pas gak di-hover (kecuali lagi di-scroll) */
+.scroll-x::-webkit-scrollbar-thumb { opacity: .5; transition: opacity 160ms var(--ease-out); }
+.scroll-x:hover::-webkit-scrollbar-thumb { opacity: 1; }
 .chip { padding: 8px 14px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--fg); cursor: pointer; font-size: 13px; text-transform: capitalize; }
 .chip.active { border-color: var(--accent); color: var(--accent); font-weight: 700; }
 .swatch { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
