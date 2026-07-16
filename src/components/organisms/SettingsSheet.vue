@@ -83,11 +83,9 @@
               </div>
               <div class="field">
                 <label>Preset</label>
-                <Dropdown
-                  :model-value="theme.custom ? '' : theme.preset"
-                  :options="presetOptions"
-                  @update:model-value="theme.setPreset($event)"
-                />
+                <div class="chips scroll-x">
+                  <button v-for="p in theme.presets" :key="p" class="chip" :class="{ active: theme.preset === p && !theme.custom }" @click="theme.setPreset(p)">{{ p }}</button>
+                </div>
               </div>
               <div class="field">
                 <label>Warna kustom</label>
@@ -98,11 +96,9 @@
               </div>
               <div class="field">
                 <label>Wallpaper chat</label>
-                <Dropdown
-                  :model-value="theme.wallpaper"
-                  :options="wallpaperOptions"
-                  @update:model-value="theme.setWallpaper($event)"
-                />
+                <div class="chips scroll-x">
+                  <button v-for="w in theme.wallpapers" :key="w" class="chip" :class="{ active: theme.wallpaper === w }" @click="theme.setWallpaper(w)">{{ w }}</button>
+                </div>
               </div>
             </section>
 
@@ -151,13 +147,12 @@
 </template>
 
 <script setup>
-import { ref, watch, computed } from 'vue'
+import { ref, watch } from 'vue'
 import Avatar from '../atoms/Avatar.vue'
 import TextInput from '../atoms/TextInput.vue'
 import BaseButton from '../atoms/BaseButton.vue'
 import Toggle from '../atoms/Toggle.vue'
 import Icon from '../atoms/Icon.vue'
-import Dropdown from '../atoms/Dropdown.vue'
 import { useThemeStore } from '../../stores/theme'
 import { isUsernameAvailable } from '../../lib/auth'
 import { useToastStore } from '../../stores/toast'
@@ -171,9 +166,6 @@ const props = defineProps({
 const emit = defineEmits(['close', 'backup', 'restore', 'save-username', 'save-display', 'avatar', 'delete-account', 'update:prefs'])
 const theme = useThemeStore()
 const toast = useToastStore()
-
-const presetOptions = computed(() => theme.presets.map((p) => ({ label: p, value: p })))
-const wallpaperOptions = computed(() => theme.wallpapers.map((w) => ({ label: w, value: w })))
 
 const section = ref('profile')
 const usernameDraft = ref(props.profile?.username || '')
@@ -259,6 +251,9 @@ function confirmDelete() { emit('delete-account') }
 .hint { color: var(--muted); font-size: 12px; }
 .ok { color: #16a34a; font-size: 12px; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.scroll-x { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scrollbar-width: thin; }
+.scroll-x::-webkit-scrollbar { height: 6px; }
+.scroll-x::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 .chip { padding: 8px 14px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--fg); cursor: pointer; font-size: 13px; text-transform: capitalize; }
 .chip.active { border-color: var(--accent); color: var(--accent); font-weight: 700; }
 .swatch { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
