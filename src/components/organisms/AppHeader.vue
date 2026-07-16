@@ -49,8 +49,7 @@ watch(() => props.searching, (v) => { if (v) nextTick(() => input.value?.focus()
 <style scoped>
 .app-header {
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
-  height: 56px; box-sizing: border-box; padding: 0 12px;
-  padding-top: max(0px, env(safe-area-inset-top));
+  height: 56px; box-sizing: border-box; padding: 8px 12px;
   border-bottom: 1px solid var(--border); background: var(--surface);
 }
 .app-header.searching { display: flex; gap: 8px; }
