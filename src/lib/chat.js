@@ -109,9 +109,11 @@ export async function loadMessages(conversationId) {
   const ss = await sharedSecretWith(partnerOf(conversationId))
   return await Promise.all(
     visible.map(async (m) => {
-      const plaintext = m.ciphertext
-        ? await decryptText(ss, m.ciphertext, m.nonce)
-        : null
+      let plaintext = null
+      if (m.ciphertext) {
+        try { plaintext = await decryptText(ss, m.ciphertext, m.nonce) }
+        catch { plaintext = '[pesan tidak dapat didekripsi]' }
+      }
       return {
         id: m.id,
         senderId: m.sender_id,

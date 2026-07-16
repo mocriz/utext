@@ -73,6 +73,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import Icon from '../atoms/Icon.vue'
+import IconButton from '../atoms/IconButton.vue'
 import TextArea from '../atoms/TextArea.vue'
 import PhotoPreview from '../molecules/PhotoPreview.vue'
 
