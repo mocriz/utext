@@ -72,6 +72,6 @@ function onErr() { failed.value = true }
 .avatar img { width: 100%; height: 100%; object-fit: cover; }
 .initials { font-size: .8em; }
 .sm { width: 32px; height: 32px; font-size: 13px; }
-.md { width: 42px; height: 42px; font-size: 15px; }
+.md { width: 36px; height: 36px; font-size: 14px; }
 .lg { width: 64px; height: 64px; font-size: 22px; }
 </style>
