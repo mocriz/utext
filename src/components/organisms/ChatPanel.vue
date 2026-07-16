@@ -27,6 +27,7 @@
       @cancel-photo="$emit('cancel-photo')"
       @cancel-reply="$emit('cancel-reply')"
       @cancel-edit="$emit('cancel-edit')"
+      @jump-bottom="$emit('jump-bottom')"
     />
   </section>
 </template>
