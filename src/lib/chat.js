@@ -405,6 +405,13 @@ export async function getLastSeen(targetUserId) {
   return data ? new Date(data).getTime() : null
 }
 
+// Pastikan conversation user <-> bot AI ada (buat kalau belum). Return convId.
+export async function ensureBotConversation() {
+  const { data, error } = await supabase.rpc('ensure_bot_conversation')
+  if (error) throw error
+  return data
+}
+
 // Heartbeat: update last_seen kita (biar lawan liat kita online)
 export async function touchLastSeen() {
   try { await supabase.rpc('touch_last_seen') } catch {}

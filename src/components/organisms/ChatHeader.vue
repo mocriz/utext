@@ -5,10 +5,11 @@
     <div class="info">
       <div class="name">{{ partner.display_name }}</div>
       <div class="status">
-        <span v-if="typing" class="typing">
+        <span v-if="typing && !isBot" class="typing">
           <span class="tdot" /><span class="tdot" /><span class="tdot" />
           mengetik…
         </span>
+        <span v-else-if="isBot" class="bot">Asisten AI</span>
         <span v-else-if="online" class="online">Online</span>
         <span v-else class="offline">{{ lastSeenText }}</span>
       </div>
@@ -25,6 +26,7 @@ const props = defineProps({
   online: { type: Boolean, default: false },
   typing: { type: Boolean, default: false },
   lastSeen: { type: Number, default: 0 }, // epoch ms
+  isBot: { type: Boolean, default: false },
 })
 defineEmits(['back'])
 
@@ -55,6 +57,7 @@ const lastSeenText = fmt(props.lastSeen)
 .status { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
 .online { color: #16a34a; }
 .offline { color: var(--muted); }
+.bot { color: var(--accent); font-weight: 600; }
 .typing { display: inline-flex; align-items: center; gap: 3px; color: var(--accent); font-style: italic; }
 .tdot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); animation: tdot 1s infinite ease-in-out; }
 .tdot:nth-child(2) { animation-delay: .15s; }

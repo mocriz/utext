@@ -39,6 +39,7 @@
         ref="chatPanel"
         v-if="activeConv && activePartner"
         :partner="activePartner"
+        :is-bot="activePartner?.username === 'asisten_ai'"
         :messages="visibleMessages"
         :me-id="auth.user?.id"
         :typing="room.typing"
@@ -122,7 +123,7 @@ import {
   loadMessages, sendText, sendPhoto, subscribeMessages, editMessage,
   subscribeTyping, subscribePresence, rememberPartner, getPhoto, findExistingConversation,
   deleteConversation, deleteMessageForMe, deleteMessageForAll, deleteConversationForAll, markDelivered, markRead,
-  getLastSeen, touchLastSeen,
+  getLastSeen, touchLastSeen, ensureBotConversation,
   updateDisplayName as rpcUpdateDisplayName, uploadAvatar, searchUsers, startConversationWith,
 } from '../../lib/chat'
 import { backupToDrive, restoreFromDrive, updateUsername, getMyProfile, updateDisplayName, updateAvatar, softDeleteAccount } from '../../lib/auth'
@@ -642,6 +643,8 @@ const visibleMessages = computed(() => room.messages.filter((m) => !m._hidden &&
 
 onMounted(async () => {
   prefs.hydrate()
+  // pastikan conversation dgn bot AI ada (buat kalau belum) -> muncul di list
+  try { await ensureBotConversation() } catch (e) { console.warn('bot setup skip:', e?.message) }
   await conv.load()
   // baseline history (view: home) biar back button HP di list = keluar web (normal)
   if (window.innerWidth <= 720 && !history.state) history.replaceState({ view: 'home' }, '')

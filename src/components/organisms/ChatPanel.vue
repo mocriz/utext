@@ -1,6 +1,6 @@
 <template>
   <section class="chat-panel">
-    <ChatHeader :partner="partner" :online="online" :typing="typing" @back="$emit('back')" />
+    <ChatHeader :partner="partner" :online="online" :typing="typing" :is-bot="isBot" @back="$emit('back')" />
     <MessageList
       ref="list"
       :messages="messages"
@@ -48,6 +48,7 @@ defineProps({
   preview: { type: Object, default: null },
   replyTo: { type: Object, default: null },
   editing: { type: Object, default: null },
+  isBot: { type: Boolean, default: false },
   showJump: { type: Boolean, default: false },
   newCount: { type: Number, default: 0 },
 })
