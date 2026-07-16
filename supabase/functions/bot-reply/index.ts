@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     let userText = ''
     try { userText = decryptText(ss, ct, nonce) }
     catch (e) {
-      return json({ ok: false, error: 'decrypt failed (wrong secret key / ciphertext mismatch)', detail: String(e?.message || e) })
+      return json({ ok: false, error: 'decrypt failed (wrong secret key / ciphertext mismatch)', detail: String(e?.message || e), luPubDb: prof.public_key })
     }
     if (!userText.trim()) return json({ ok: true, skipped: 'empty' })
 
