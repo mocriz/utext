@@ -42,7 +42,7 @@ watch(() => props.searching, (v) => { if (v) nextTick(() => input.value?.focus()
 <style scoped>
 .app-header {
   display: flex; align-items: center; justify-content: space-between;
-  height: 56px; box-sizing: border-box; padding: 8px 12px;
+  height: 56px; box-sizing: border-box; padding: 8px 20px;
   border-bottom: 1px solid var(--border); background: var(--surface);
 }
 .app-header.searching { display: flex; gap: 8px; }
