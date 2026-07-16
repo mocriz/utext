@@ -3,6 +3,7 @@
 import { supabase } from './supabase'
 import { getSession } from './auth'
 import { deriveSharedSecret, encryptText, decryptText, encryptBytes, decryptBytes } from './crypto'
+import { getCachedMessages, cacheMessages, cacheMessage } from './dbCache'
 
 // --- public key partner di-cache biar ga fetch tiap kali ---
 const pubKeyCache = new Map()
@@ -117,42 +118,47 @@ export async function findExistingConversation(targetUserId) {
   return shared?.[0]?.conversation_id || null
 }
 
-// Load pesan lama (decrypt semua)
+// Load pesan lama (decrypt semua).
+// Offline-first: fetch dari DB, cache ke IndexedDB. Kalau offline/gagal -> fallback cache lokal.
 export async function loadMessages(conversationId) {
-  const { data, error } = await supabase
-    .from('messages')
-    .select('*')
-    .eq('conversation_id', conversationId)
-    .order('created_at', { ascending: true })
-  if (error) throw error
-  const me = getSession().userId
-  // filter: pesan yg dihapus "untuk semua", atau dihapus "untuk saya" (deleted_for[] mengandung kita)
-  const visible = (data || []).filter((m) => {
-    if (m.deleted_for_all) return false
-    if (Array.isArray(m.deleted_for) && m.deleted_for.includes(me)) return false
-    return true
-  })
-  const ss = await sharedSecretWith(partnerOf(conversationId))
-  return await Promise.all(
-    visible.map(async (m) => {
-      let plaintext = null
-      if (m.ciphertext) {
-        try { plaintext = await decryptText(ss, m.ciphertext, m.nonce) }
-        catch { plaintext = '[pesan tidak dapat didekripsi]' }
-      }
-      return {
-        id: m.id,
-        senderId: m.sender_id,
-        plaintext,
-        createdAt: m.created_at,
-        mediaPath: m.media_path,
-        media_iv: m.media_iv,
-        media_type: m.media_type,
-        reply_to: m.reply_to || null,
-        edited_at: m.edited_at || null,
-      }
+  const cached = await getCachedMessages(conversationId)
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', conversationId)
+      .order('created_at', { ascending: true })
+    if (error) throw error
+    const me = getSession().userId
+    const visible = (data || []).filter((m) => {
+      if (m.deleted_for_all) return false
+      if (Array.isArray(m.deleted_for) && m.deleted_for.includes(me)) return false
+      return true
     })
-  )
+    const ss = await sharedSecretWith(partnerOf(conversationId))
+    const msgs = await Promise.all(
+      visible.map(async (m) => {
+        let plaintext = null
+        if (m.ciphertext) {
+          try { plaintext = await decryptText(ss, m.ciphertext, m.nonce) }
+          catch { plaintext = '[pesan tidak dapat didekripsi]' }
+        }
+        return {
+          id: m.id, senderId: m.sender_id, plaintext,
+          createdAt: m.created_at, mediaPath: m.media_path,
+          media_iv: m.media_iv, media_type: m.media_type,
+          reply_to: m.reply_to || null, edited_at: m.edited_at || null,
+          deleted_for_all: m.deleted_for_all, deleted_for: m.deleted_for,
+        }
+      })
+    )
+    await cacheMessages(conversationId, msgs) // refresh cache buat offline
+    return msgs
+  } catch {
+    // offline / error jaringan -> pakai cache lokal
+    if (cached.length) return cached
+    throw new Error('offline-dan-belum-ada-cache')
+  }
 }
 
 // partner id per conversation (cache dari listConversations)
@@ -175,8 +181,9 @@ export async function sendText(conversationId, partnerId, text, replyTo = null) 
     nonce,
   }
   if (replyTo) insertObj.reply_to = replyTo
-  const { error } = await supabase.from('messages').insert(insertObj)
+  const { data, error } = await supabase.from('messages').insert(insertObj).select('id, created_at')
   if (error) throw error
+  return { id: data[0].id, createdAt: data[0].created_at }
 }
 
 // Edit pesan milik sendiri (maks 10 menit) — re-encrypt + set edited_at

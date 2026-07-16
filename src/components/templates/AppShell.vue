@@ -126,6 +126,7 @@ import {
   updateDisplayName as rpcUpdateDisplayName, uploadAvatar, searchUsers, startConversationWith,
 } from '../../lib/chat'
 import { backupToDrive, restoreFromDrive, updateUsername, getMyProfile, updateDisplayName, updateAvatar, softDeleteAccount } from '../../lib/auth'
+import { cacheMessage } from '../../lib/dbCache'
 
 const ui = useUiStore()
 const auth = useAuthStore()
@@ -260,6 +261,8 @@ async function onOpen(c) {
     enrich(m)
     room.messages.push(m)
     conv.setLast(c.conversationId, m.plaintext || 'Foto')
+    // cache ke IndexedDB buat offline read
+    cacheMessage({ id: m.id, convId: c.conversationId, plaintext: m.plaintext || 'Foto', senderId: m.senderId, createdAt: m.createdAt })
     // pesan partner masuk -> kita langsung tandai read di LOCAL (optimistic, ga nunggu RPC)
     if (m.senderId !== myId.value) {
       conv.bumpUnread(c.conversationId)
@@ -437,9 +440,11 @@ async function onSend() {
   }
   const replyId = replyingTo.value?.id || null
   replyingTo.value = null
-  await sendText(cid, activePartner.value.id, text, replyId) // kirim ISI ASLI (spasi depan dipertahankan)
+  const sent = await sendText(cid, activePartner.value.id, text, replyId) // kirim ISI ASLI
   conv.setLast(cid, text.trim())
-  room.messages.push(enrich({ id: crypto.randomUUID(), senderId: myId.value, plaintext: text, createdAt: new Date().toISOString(), reply_to: replyId, receipt: 'sent' }))
+  room.messages.push(enrich({ id: sent.id, senderId: myId.value, plaintext: text, createdAt: sent.createdAt, reply_to: replyId, receipt: 'sent' }))
+  // cache ke IndexedDB buat offline read
+  cacheMessage({ id: sent.id, convId: cid, plaintext: text, senderId: myId.value, createdAt: sent.createdAt, reply_to: replyId })
   // kalau chat ke AI bot -> panggil Edge Function (trigger pg_net gak reliable di plan ini)
   if (activePartner.value?.id === 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb') {
     supabase.functions.invoke('bot-reply', {
