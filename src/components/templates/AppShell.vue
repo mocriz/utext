@@ -127,6 +127,7 @@ import {
 } from '../../lib/chat'
 import { backupToDrive, restoreFromDrive, updateUsername, getMyProfile, updateDisplayName, updateAvatar, softDeleteAccount } from '../../lib/auth'
 import { cacheMessage, enqueueMessage, getQueue, dequeueMessage } from '../../lib/dbCache'
+import { subscribePush } from '../../lib/push'
 
 const ui = useUiStore()
 const auth = useAuthStore()
@@ -730,6 +731,9 @@ onMounted(async () => {
   window.addEventListener('online', flushQueue)
   // flush sisa queue kalau ada (misal app dibuka pas udah online)
   flushQueue()
+
+  // Web Push: subscribe best-effort (notif bot reply pas app tertutup). iOS PWA gak dukung.
+  subscribePush().catch(() => {})
 
   // auto-focus field text kalau user ngetik pakai keyboard fisik (bukan saat di input/modal lain)
   window.addEventListener('keydown', (e) => {

@@ -5,11 +5,19 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import sodium from 'https://esm.sh/libsodium-wrappers@0.7.11'
+import webpush from 'https://esm.sh/web-push@3.6.7'
 
 const BOT_PRIVATE_KEY = Deno.env.get('BOT_PRIVATE_KEY')   // base64 X25519 priv
 const BOT_USER_ID     = Deno.env.get('BOT_USER_ID')       // uuid bot
 const SUPABASE_URL    = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const VAPID_PUBLIC  = Deno.env.get('VAPID_PUBLIC_KEY') || ''
+const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY') || ''
+const VAPID_SUBJECT = 'mailto:push@utext.app'
+
+if (VAPID_PUBLIC && VAPID_PRIVATE) {
+  try { webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC, VAPID_PRIVATE) } catch {}
+}
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
 
@@ -33,9 +41,27 @@ function encryptText(ssB64: string, plaintext: string): { ciphertext: string; no
   return { ciphertext: b64enc(ct), nonce: b64enc(nonce) }
 }
 
-// throttle per conversation (anti token blow-up) — in-memory (per instance)
-const lastCall = new Map<string, number>()
-const THROTTLE_MS = 1500
+// kirim Web Push ke user (kalau ada subscription & VAPID diset)
+async function notifyUserPush(userId: string, body: string) {
+  if (!VAPID_PUBLIC || !VAPID_PRIVATE) return
+  try {
+    const { data: subs } = await supabase.rpc('get_push_subscriptions', { u: userId })
+    const list = (subs as any[]) || []
+    for (const sub of list) {
+      try {
+        await webpush.sendNotification(sub, JSON.stringify({
+          title: 'Deno (uText)',
+          body,
+          tag: 'bot-reply',
+          data: { url: '/' },
+        }))
+      } catch (e) {
+        // subscription gak valid (misal device unsubscribe) -> abaikan
+        console.warn('push send gagal:', String(e?.message || e))
+      }
+    }
+  } catch {}
+}
 
 Deno.serve(async (req) => {
   // preflight CORS dari browser (functions.invoke)
@@ -157,6 +183,8 @@ Deno.serve(async (req) => {
       status: 'sent',
     })
     if (insErr) return json({ ok: false, error: insErr.message })
+    // kirim push notif ke user (kalau app tertutup & udah subscribe)
+    notifyUserPush(senderId, reply).catch(() => {})
     return json({ ok: true })
   } catch (e) {
     return json({ ok: false, error: String(e?.message || e) })

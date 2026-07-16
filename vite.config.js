@@ -8,6 +8,11 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
+      // pakai custom service worker (biar bisa handle push event)
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      injectRegister: 'auto',
       includeAssets: ['favicon.png', 'favicon.svg', 'og-image.svg'],
       manifest: {
         name: 'uText — Chat Terenkripsi',
@@ -26,21 +31,18 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // precache app shell (JS/CSS/HTML) biar bisa buka tanpa internet
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/index.html',
-        // jangan cache Supabase API (harus online)
         navigateFallbackDenylist: [/^\/api\//, /^https:\/\/sgmiqkqigfmwgiajaqvo\.supabase\.co/],
         runtimeCaching: [
           {
-            // Supabase REST/storage: network-first, jangan cache (data sensitif)
             urlPattern: ({ url }) => url.hostname.includes('supabase.co'),
             handler: 'NetworkOnly',
           },
         ],
       },
       devOptions: {
-        enabled: false, // PWA aktif cuma di build (dev tetep normal)
+        enabled: false,
       },
     }),
   ],
