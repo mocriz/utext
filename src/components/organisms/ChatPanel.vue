@@ -17,6 +17,8 @@
       :preview="preview"
       :reply-to="replyTo"
       :editing="editing"
+      :show-jump="showJump"
+      :new-count="newCount"
       @update:draft="$emit('update:draft', $event)"
       @typing="$emit('typing')"
       @send="$emit('send')"
