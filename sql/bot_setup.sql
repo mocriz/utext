@@ -110,7 +110,7 @@ begin
     return null;
   end if;
   perform net.http_post(
-    url := 'https://sgmiqkqigfmwgiajaqvo.functions.supabase.co/bot-reply',
+    url := 'https://sgmiqkqigfmwgiajaqvo.supabase.co/functions/v1/bot-reply',
     body := json_build_object('record', row_to_json(NEW))::text,
     headers := '{"Content-Type":"application/json"}'::jsonb,
     timeout_milliseconds := 1000
