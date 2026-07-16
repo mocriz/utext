@@ -11,7 +11,15 @@
     </header>
 
     <!-- grid -->
-    <div class="board">
+    <div
+      class="board"
+      ref="boardEl"
+      @touchstart="onTouchStart"
+      @touchend="onSwipe"
+      @mousedown="onMouseDown"
+      @mouseup="onMouseUp"
+      @mouseleave="onMouseUp"
+    >
       <div v-for="n in 16" :key="n" class="cell">
         <span v-if="tiles[n - 1]" class="tile" :class="'v' + tiles[n - 1]">{{ tiles[n - 1] }}</span>
       </div>
@@ -32,19 +40,17 @@
       <button class="refresh" @click.stop="onRefresh">Refresh</button>
     </div>
 
-    <!-- PIN screen (blank + numeric) -->
+    <!-- PIN screen: blank + numeric -->
     <div v-if="showPin" class="pinwrap">
       <input
         ref="pinInput"
         v-model="pin"
         class="pininput"
-        type="number"
+        type="text"
         inputmode="numeric"
-        pattern="[0-9]*"
+        autocomplete="off"
         maxlength="4"
-        autofocus
         @input="onPinInput"
-        @keydown.stop
       />
       <div class="dots">
         <span v-for="i in 4" :key="i" :class="{ on: pin.length >= i }"></span>
@@ -54,7 +60,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 
 const emit = defineEmits(['reveal'])
 
@@ -104,14 +110,25 @@ function onKey(e) {
   const m = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3 }
   if (e.key in m) { e.preventDefault(); move(m[e.key]) }
 }
-function onSwipe(e) {
-  const t = e.changedTouches[0]
-  const dx = t.clientX - swipeX, dy = t.clientY - swipeY
+function computeSwipe(x, y) {
+  const dx = x - swipeX, dy = y - swipeY
+  if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return // terlalu kecil, abaikan
   if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 1 : 3)
   else move(dy > 0 ? 2 : 0)
 }
+function onSwipe(e) {
+  const t = e.changedTouches ? e.changedTouches[0] : e
+  computeSwipe(t.clientX, t.clientY)
+}
+function onTouchStart(e) { const t = e.changedTouches[0]; swipeX = t.clientX; swipeY = t.clientY }
+let mouseDown = false
+function onMouseDown(e) { mouseDown = true; swipeX = e.clientX; swipeY = e.clientY }
+function onMouseUp(e) {
+  if (!mouseDown) return
+  mouseDown = false
+  computeSwipe(e.clientX, e.clientY)
+}
 let swipeX = 0, swipeY = 0
-function onTouchStart(e) { swipeX = e.changedTouches[0].clientX; swipeY = e.changedTouches[0].clientY }
 
 /* ============ MORSE TRIGGER (..- = U) ============ */
 const showError = ref(false)
@@ -160,17 +177,15 @@ function onPinInput() {
     else { pin.value = '' }  // salah -> reset (blank again)
   }
 }
+// fokus input pas PIN screen muncul (biar keyboard langsung nyala)
+watch(showPin, (v) => { if (v) nextTick(() => pinInput.value?.focus()) })
 
 onMounted(() => {
   init()
   window.addEventListener('keydown', onKey)
-  window.addEventListener('touchstart', onTouchStart, { passive: true })
-  window.addEventListener('touchend', onSwipe)
 })
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey)
-  window.removeEventListener('touchstart', onTouchStart)
-  window.removeEventListener('touchend', onSwipe)
 })
 </script>
 
