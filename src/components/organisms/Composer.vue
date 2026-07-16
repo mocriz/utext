@@ -45,6 +45,20 @@
     >
       <Icon name="mdi:send" :size="20" />
     </button>
+
+    <!-- tombol loncat ke bawah: DI LUAR flow composer (absolute), tepat di ATAS tombol Kirim -->
+    <Transition name="jump">
+      <button
+        v-if="showJump"
+        class="jump-btn"
+        title="Ke pesan terbaru"
+        @mousedown.prevent
+        @click="$emit('jump-bottom')"
+      >
+        <Icon name="mdi:chevron-down" :size="20" />
+        <span v-if="newCount > 0" class="badge">{{ newCount > 99 ? '99+' : newCount }}</span>
+      </button>
+    </Transition>
   </div>
 </template>
 
@@ -58,6 +72,8 @@ const props = defineProps({
   preview: { type: Object, default: null },
   replyTo: { type: Object, default: null },
   editing: { type: Object, default: null },
+  showJump: { type: Boolean, default: false },
+  newCount: { type: Number, default: 0 },
 })
 const ta = ref(null)
 const fileInput = ref(null)
@@ -65,7 +81,7 @@ const MAX = 4096
 
 const emit = defineEmits([
   'update:draft', 'typing', 'send', 'pick', 'confirm-photo', 'cancel-photo',
-  'cancel-reply', 'cancel-edit', 'paste-image',
+  'cancel-reply', 'cancel-edit', 'paste-image', 'jump-bottom',
 ])
 
 const len = computed(() => props.draft.length)
@@ -137,4 +153,25 @@ defineExpose({ focus: () => ta.value?.focus() })
 .send-btn:active:not(:disabled) { transform: scale(0.94); }
 .send-btn:disabled { opacity: .4; cursor: not-allowed; }
 
+/* tombol loncat ke bawah: absolute di LUAR flow composer, tepat di ATAS tombol Kirim (kolom kanan sama) */
+.jump-btn {
+  position: absolute; right: 16px; bottom: 100%;
+  margin-bottom: 10px;
+  z-index: 15;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 1px solid var(--border); background: var(--surface); color: var(--fg);
+  box-shadow: 0 2px 10px rgba(0,0,0,.18); cursor: pointer;
+  transition: transform 140ms var(--ease-out), background 140ms var(--ease-out);
+}
+.jump-btn:hover { background: var(--surface-2); }
+.jump-btn:active { transform: scale(0.94); }
+.jump-btn .badge {
+  position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 9px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+/* enter/exit: scale + fade (dari atas, origin-aware dari posisinya) */
+.jump-enter-active, .jump-leave-active { transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out); }
+.jump-enter-from, .jump-leave-to { opacity: 0; transform: scale(0.8) translateY(-8px); }
 </style>
