@@ -1,0 +1,202 @@
+<template>
+  <div class="decoy">
+    <header class="topbar">
+      <h1
+        class="title"
+        @pointerdown="onTitleDown"
+        @pointerup="onTitleUp"
+        @pointerleave="onTitleLeave"
+      >2048</h1>
+      <div class="score">Score {{ score }}</div>
+    </header>
+
+    <!-- grid -->
+    <div class="board">
+      <div v-for="n in 16" :key="n" class="cell">
+        <span v-if="tiles[n - 1]" class="tile" :class="'v' + tiles[n - 1]">{{ tiles[n - 1] }}</span>
+      </div>
+    </div>
+    <p class="hint">Swipe / arrow keys to play</p>
+
+    <!-- fake UI error (muncul setelah Morse ..-) -->
+    <div v-if="showError" class="errbox" @click="onErrBoxClick">
+      <p class="errtxt">
+        View state error: locale resource missing. Run
+        <span
+          class="secret"
+          @pointerdown.stop="onSecretDown"
+          @pointerup.stop="onSecretUp"
+        >reset</span>
+        to reinitialize, or Refresh.
+      </p>
+      <button class="refresh" @click.stop="onRefresh">Refresh</button>
+    </div>
+
+    <!-- PIN screen (blank + numeric) -->
+    <div v-if="showPin" class="pinwrap">
+      <input
+        ref="pinInput"
+        v-model="pin"
+        class="pininput"
+        type="number"
+        inputmode="numeric"
+        pattern="[0-9]*"
+        maxlength="4"
+        autofocus
+        @input="onPinInput"
+        @keydown.stop
+      />
+      <div class="dots">
+        <span v-for="i in 4" :key="i" :class="{ on: pin.length >= i }"></span>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
+
+const emit = defineEmits(['reveal'])
+
+/* ============ 2048 GAME ============ */
+const score = ref(0)
+const tiles = reactive(new Array(16).fill(0))
+let busy = false
+
+function spawn() {
+  const empty = []
+  for (let i = 0; i < 16; i++) if (!tiles[i]) empty.push(i)
+  if (!empty.length) return
+  const i = empty[Math.floor(Math.random() * empty.length)]
+  tiles[i] = Math.random() < 0.9 ? 2 : 4
+}
+function init() {
+  for (let i = 0; i < 16; i++) tiles[i] = 0
+  score.value = 0
+  spawn(); spawn()
+}
+function slide(row) {
+  let arr = row.filter((x) => x)
+  for (let i = 0; i < arr.length - 1; i++) {
+    if (arr[i] === arr[i + 1]) { arr[i] *= 2; score.value += arr[i]; arr.splice(i + 1, 1) }
+  }
+  while (arr.length < 4) arr.push(0)
+  return arr
+}
+function rotate() {
+  const n = []
+  for (let c = 0; c < 4; c++) for (let r = 3; r >= 0; r--) n.push(tiles[r * 4 + c])
+  for (let i = 0; i < 16; i++) tiles[i] = n[i]
+}
+function move(dir) {
+  if (busy || showError.value || showPin.value) return
+  const before = tiles.join(',')
+  for (let i = 0; i < dir; i++) rotate()
+  for (let r = 0; r < 4; r++) {
+    const row = [tiles[r * 4], tiles[r * 4 + 1], tiles[r * 4 + 2], tiles[r * 4 + 3]]
+    const out = slide(row)
+    for (let c = 0; c < 4; c++) tiles[r * 4 + c] = out[c]
+  }
+  for (let i = 0; i < (4 - dir) % 4; i++) rotate()
+  if (tiles.join(',') !== before) spawn()
+}
+function onKey(e) {
+  const m = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3 }
+  if (e.key in m) { e.preventDefault(); move(m[e.key]) }
+}
+function onSwipe(e) {
+  const t = e.changedTouches[0]
+  const dx = t.clientX - swipeX, dy = t.clientY - swipeY
+  if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 1 : 3)
+  else move(dy > 0 ? 2 : 0)
+}
+let swipeX = 0, swipeY = 0
+function onTouchStart(e) { swipeX = e.changedTouches[0].clientX; swipeY = e.changedTouches[0].clientY }
+
+/* ============ MORSE TRIGGER (..- = U) ============ */
+const showError = ref(false)
+const showPin = ref(false)
+let mSequence = []            // 'dot' | 'dash'
+let mTimer = null
+let titleDownAt = 0
+function onTitleDown() { titleDownAt = Date.now() }
+function onTitleUp() {
+  const dur = Date.now() - titleDownAt
+  const sym = dur > 500 ? 'dash' : 'dot'
+  pushMorse(sym)
+}
+function onTitleLeave() { if (titleDownAt) { onTitleUp() } }
+function pushMorse(sym) {
+  if (showError.value || showPin.value) return
+  mSequence.push(sym)
+  if (mSequence.length > 3) mSequence.shift()
+  clearTimeout(mTimer)
+  mTimer = setTimeout(() => { mSequence = [] }, 1500) // reset kalau kelamaan
+  // cek ..- (dot dot dash)
+  if (mSequence.length === 3 && mSequence[0] === 'dot' && mSequence[1] === 'dot' && mSequence[2] === 'dash') {
+    showError.value = true
+    mSequence = []
+  }
+}
+
+/* ============ FAKE ERROR + SECRET WORD ============ */
+function onErrBoxClick() { /* klik biasa di box = no-op (orang awam refresh) */ }
+function onRefresh() { showError.value = false; init() }  // balik ke game
+let secretDownAt = 0
+function onSecretDown() { secretDownAt = Date.now() }
+function onSecretUp() {
+  const dur = Date.now() - secretDownAt
+  if (dur >= 500) showPin.value = true   // long-press kata "reset" -> PIN
+}
+
+/* ============ PIN SCREEN ============ */
+const pin = ref('')
+const pinInput = ref(null)
+const CORRECT = (import.meta.env.VITE_DECOY_PIN || '1234').toString()
+function onPinInput() {
+  pin.value = pin.value.replace(/\D/g, '').slice(0, 4)
+  if (pin.value.length === 4) {
+    if (pin.value === CORRECT) emit('reveal')
+    else { pin.value = '' }  // salah -> reset (blank again)
+  }
+}
+
+onMounted(() => {
+  init()
+  window.addEventListener('keydown', onKey)
+  window.addEventListener('touchstart', onTouchStart, { passive: true })
+  window.addEventListener('touchend', onSwipe)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKey)
+  window.removeEventListener('touchstart', onTouchStart)
+  window.removeEventListener('touchend', onSwipe)
+})
+</script>
+
+<style scoped>
+.decoy { max-width: 420px; margin: 0 auto; padding: 16px; height: 100dvh; background: #faf8ef; color: #776e65; user-select: none; }
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.title { font-size: 48px; font-weight: 800; color: #776e65; cursor: pointer; margin: 0; }
+.score { background: #bbada0; color: #fff; padding: 6px 12px; border-radius: 6px; font-weight: 700; }
+.board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; background: #bbada0; padding: 10px; border-radius: 8px; aspect-ratio: 1; }
+.cell { background: #cdc1b4; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 28px; }
+.tile { color: #fff; }
+.v2 { background: #eee4da; color: #776e65; } .v4 { background: #ede0c8; color: #776e65; }
+.v8 { background: #f2b179; } .v16 { background: #f59563; } .v32 { background: #f67c5f; } .v64 { background: #f65e3b; }
+.v128 { background: #edcf72; } .v256 { background: #edcc61; } .v512 { background: #edc850; } .v1024 { background: #edc53f; } .v2048 { background: #edc22e; }
+.hint { text-align: center; opacity: .6; font-size: 13px; margin-top: 12px; }
+
+/* fake error overlay */
+.errbox { position: fixed; inset: 0; background: rgba(20,20,20,.92); color: #e8e8e8; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 24px; z-index: 50; }
+.errtxt { font-size: 15px; line-height: 1.6; text-align: center; max-width: 320px; }
+.secret { color: #e8e8e8; } /* SAMA dengan teks biasa, gak di-highlight */
+.refresh { background: #3a3a3a; color: #fff; border: 1px solid #555; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+
+/* PIN screen: blank + numeric */
+.pinwrap { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; z-index: 60; }
+.pininput { position: absolute; opacity: 0; }  /* keyboard numeric muncul, tapi input gak keliatan */
+.dots { display: flex; gap: 14px; }
+.dots span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #555; }
+.dots span.on { background: #fff; border-color: #fff; }
+</style>

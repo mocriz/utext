@@ -1,9 +1,12 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const HIDDEN = env.VITE_HIDDEN_APP === 'true'
+  return {
   plugins: [
     vue(),
     VitePWA({
@@ -15,9 +18,9 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['favicon.png', 'favicon.svg', 'og-image.svg'],
       manifest: {
-        name: 'uText — Chat Terenkripsi',
-        short_name: 'uText',
-        description: 'Chat pribadi terenkripsi end-to-end. Hanya kamu dan lawan bicara yang bisa membaca pesan.',
+        name: HIDDEN ? '2048' : 'uText — Chat Terenkripsi',
+        short_name: HIDDEN ? '2048' : 'uText',
+        description: HIDDEN ? 'Classic 2048 puzzle game.' : 'Chat pribadi terenkripsi end-to-end. Hanya kamu dan lawan bicara yang bisa membaca pesan.',
         theme_color: '#0b0b0f',
         background_color: '#0b0b0f',
         display: 'standalone',
@@ -46,4 +49,5 @@ export default defineConfig({
       },
     }),
   ],
+  }
 })
