@@ -64,57 +64,82 @@ import { ref, reactive, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 
 const emit = defineEmits(['reveal'])
 
-/* ============ 2048 GAME ============ */
+/* ============ 2048 GAME (mekanik es-repo: rotate + slide kiri) ============ */
 const score = ref(0)
-const tiles = reactive(new Array(16).fill(0))
-let busy = false
+// board 2D 4x4, board[y][x]
+const board = reactive(Array.from({ length: 4 }, () => [0, 0, 0, 0]))
+const tiles = computed(() => board.flat())   // biar template tetap pakai index 0..15
 
+function emptyCells() {
+  const e = []
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) if (!board[y][x]) e.push({ x, y })
+  return e
+}
 function spawn() {
-  const empty = []
-  for (let i = 0; i < 16; i++) if (!tiles[i]) empty.push(i)
-  if (!empty.length) return
-  const i = empty[Math.floor(Math.random() * empty.length)]
-  tiles[i] = Math.random() < 0.9 ? 2 : 4
+  const e = emptyCells()
+  if (!e.length) return
+  const { x, y } = e[Math.floor(Math.random() * e.length)]
+  board[y][x] = Math.random() < 0.8 ? 2 : 4
 }
 function init() {
-  for (let i = 0; i < 16; i++) tiles[i] = 0
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) board[y][x] = 0
   score.value = 0
   spawn(); spawn()
 }
-function slide(row) {
-  let arr = row.filter((x) => x)
-  for (let i = 0; i < arr.length - 1; i++) {
-    if (arr[i] === arr[i + 1]) { arr[i] *= 2; score.value += arr[i]; arr.splice(i + 1, 1) }
+
+// rotate koordinat (sama kayak es-repo)
+function rot0(c) { return c }
+function rot90(c) { return { x: c.y, y: c.x } }            // down
+function rot180(c) { return { x: 3 - c.x, y: c.y } }       // left
+function rot270(c) { return { x: c.y, y: 3 - c.x } }       // up
+
+// geser + merge ke arah "kiri" (x mengecil) pada board yang udah di-rotate
+function move(rotFn) {
+  if (showError.value || showPin.value) return
+  let moved = false
+  let scoreInc = 0
+  // 1) rotate board ke orientasi "kiri"
+  const rb = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+    const t = rotFn({ x, y })
+    rb[t.y][t.x] = board[y][x]
   }
-  while (arr.length < 4) arr.push(0)
-  return arr
-}
-function rotate() {
-  const n = []
-  for (let c = 0; c < 4; c++) for (let r = 3; r >= 0; r--) n.push(tiles[r * 4 + c])
-  for (let i = 0; i < 16; i++) tiles[i] = n[i]
-}
-function move(dir) {
-  if (busy || showError.value || showPin.value) return
-  const before = tiles.join(',')
-  for (let i = 0; i < dir; i++) rotate()
-  for (let r = 0; r < 4; r++) {
-    const row = [tiles[r * 4], tiles[r * 4 + 1], tiles[r * 4 + 2], tiles[r * 4 + 3]]
-    const out = slide(row)
-    for (let c = 0; c < 4; c++) tiles[r * 4 + c] = out[c]
+  // 2) slide tiap baris ke kiri + merge
+  for (let y = 0; y < 4; y++) {
+    const row = rb[y].filter((v) => v)
+    for (let i = 0; i < row.length - 1; i++) {
+      if (row[i] === row[i + 1]) { row[i] *= 2; scoreInc += row[i]; row.splice(i + 1, 1) }
+    }
+    while (row.length < 4) row.push(0)
+    for (let x = 0; x < 4; x++) if (rb[y][x] !== row[x]) moved = true
+    rb[y] = row
   }
-  for (let i = 0; i < (4 - dir) % 4; i++) rotate()
-  if (tiles.join(',') !== before) spawn()
+  if (!moved) return
+  // 3) rotate balik ke posisi asli (inverse rotation)
+  const inv = inverseRot(rotFn)
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+    const t = inv({ x, y })
+    board[t.y][t.x] = rb[y][x]
+  }
+  score.value += scoreInc
+  spawn()
+}
+// inverse rotation (biar tile balik ke posisi bener)
+function inverseRot(fn) {
+  if (fn === rot0) return rot0
+  if (fn === rot90) return rot270
+  if (fn === rot180) return rot180
+  return rot90
 }
 function onKey(e) {
-  const m = { ArrowUp: 0, ArrowRight: 1, ArrowDown: 2, ArrowLeft: 3 }
+  const m = { ArrowUp: rot270, ArrowRight: rot0, ArrowDown: rot90, ArrowLeft: rot180 }
   if (e.key in m) { e.preventDefault(); move(m[e.key]) }
 }
 function computeSwipe(x, y) {
   const dx = x - swipeX, dy = y - swipeY
   if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return // terlalu kecil, abaikan
-  if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 1 : 3)
-  else move(dy > 0 ? 2 : 0)
+  if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? rot0 : rot180)
+  else move(dy > 0 ? rot90 : rot270)
 }
 function onSwipe(e) {
   const t = e.changedTouches ? e.changedTouches[0] : e
