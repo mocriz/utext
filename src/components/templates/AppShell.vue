@@ -184,6 +184,10 @@ function focusComposer() {
   if (window.innerWidth <= 720) return // mobile: jangan paksa keyboard, tapi listener key tetap jalan
   nextTick(() => chatPanel.value?.focus())
 }
+// refocus composer di SEMUA device (dipakai pas kirim / balas / edit — user eksplisit lagi ngetik)
+function refocusComposer() {
+  nextTick(() => chatPanel.value?.focus())
+}
 
 let typingCh = null, presenceCh = null, msgCh = null, typingTimer = null, presenceTimer = null, lastSeen = 0
 const myId = computed(() => auth.user?.id)
@@ -286,7 +290,10 @@ async function onOpen(c) {
   // update last message di list (decrypted)
   const last = room.messages[room.messages.length - 1]
   if (last) conv.setLast(c.conversationId, last.plaintext || 'Foto')
-  focusComposer()
+  // scroll ke bawah (pesan terbaru) — jalan di semua device
+  await nextTick()
+  chatPanel.value?.scrollToBottom()
+  focusComposer() // desktop auto-focus; mobile skip biar ga langsung popup keyboard
 }
 
 // Tandai semua pesan partner di room ini sebagai read di LOCAL (langsung 2 biru, ga nunggu RPC)
@@ -425,6 +432,7 @@ async function onSend() {
   await sendText(cid, activePartner.value.id, text, replyId) // kirim ISI ASLI (spasi depan dipertahankan)
   conv.setLast(cid, text.trim())
   room.messages.push(enrich({ id: crypto.randomUUID(), senderId: myId.value, plaintext: text, createdAt: new Date().toISOString(), reply_to: replyId, receipt: 'sent' }))
+  refocusComposer() // tetap focus (keyboard tetap nyala) habis kirim
 }
 
 // ---- photo (preview dulu) ----
@@ -546,12 +554,12 @@ function startReply(m) {
     name: m.senderId === myId.value ? 'Anda' : (activePartner.value?.username || activePartner.value?.display_name),
     text: m.plaintext || 'Foto',
   }
-  focusComposer()
+  refocusComposer()
 }
 function startEdit(m) {
   editingMsg.value = m
   room.draft = m.plaintext || ''
-  focusComposer()
+  refocusComposer()
 }
 function cancelReply() { replyingTo.value = null }
 function cancelEdit() { editingMsg.value = null; room.draft = '' }
