@@ -57,8 +57,20 @@ Deno.serve(async (req) => {
 
     const senderId = rec.sender_id
     const convId   = rec.conversation_id
-    const ct       = rec.ciphertext
-    const nonce    = rec.nonce
+    // ciphertext/nonce: ambil dari payload kalau ada, else baca pesan terakhir user di DB
+    let ct = rec.ciphertext
+    let nonce = rec.nonce
+    if ((!ct || !nonce) && convId) {
+      const { data: lastMsg } = await supabase
+        .from('messages')
+        .select('ciphertext, nonce, sender_id')
+        .eq('conversation_id', convId)
+        .neq('sender_id', BOT_USER_ID)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (lastMsg) { ct = lastMsg.ciphertext; nonce = lastMsg.nonce; if (!senderId) senderId = lastMsg.sender_id }
+    }
 
     // diagnostic: cek secret kebaca atau gak
     if (!BOT_PRIVATE_KEY) return json({ ok: false, error: 'BOT_PRIVATE_KEY not set / empty' })
