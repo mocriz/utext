@@ -16,7 +16,9 @@
     </div>
 
     <input ref="fileInput" type="file" accept="image/*" hidden @change="$emit('pick', $event)" />
-    <IconButton name="mdi:image-outline" title="Kirim foto" @click="fileInput?.click()" />
+    <button class="media-btn" title="Kirim foto" @click="fileInput?.click()">
+      <Icon name="mdi:image-outline" :size="22" />
+    </button>
 
     <div class="field">
       <TextArea
@@ -34,9 +36,14 @@
       <div v-if="overLimit" class="counter err">Batas {{ MAX }} karakter</div>
     </div>
 
-    <BaseButton variant="primary" :disabled="!canSend" class="send-btn" title="Kirim" @click="onSend">
+    <button
+      class="send-btn"
+      :disabled="!canSend"
+      title="Kirim"
+      @click="onSend"
+    >
       <Icon name="mdi:send" :size="20" />
-    </BaseButton>
+    </button>
 
     <!-- tombol loncat ke bawah (muncul kalau ada pesan baru & user di atas) -->
     <button
@@ -53,11 +60,8 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import IconButton from '../atoms/IconButton.vue'
 import Icon from '../atoms/Icon.vue'
 import TextArea from '../atoms/TextArea.vue'
-import BaseButton from '../atoms/BaseButton.vue'
-import PhotoPreview from '../molecules/PhotoPreview.vue'
 
 const props = defineProps({
   draft: { type: String, default: '' },
@@ -96,7 +100,13 @@ defineExpose({ focus: () => ta.value?.focus() })
 </script>
 
 <style scoped>
-.composer { position: relative; display: flex; align-items: flex-end; gap: 8px; padding: 8px 12px; padding-bottom: calc(max(8px, env(safe-area-inset-bottom)) + var(--kb-inset, 0px)); border-top: 1px solid var(--border); background: var(--surface); }
+.composer {
+  position: relative;
+  display: flex; align-items: flex-end; gap: 6px;
+  padding: 10px 12px;
+  padding-bottom: calc(max(10px, env(safe-area-inset-bottom)) + var(--kb-inset, 0px));
+  border-top: 1px solid var(--border); background: var(--surface);
+}
 .composer :deep(.preview) { position: absolute; left: 0; right: 0; bottom: 100%; }
 .reply-bar, .edit-bar {
   position: absolute; left: 0; right: 0; bottom: 100%;
@@ -107,10 +117,38 @@ defineExpose({ focus: () => ta.value?.focus() })
 .rb-name { font-size: 12px; font-weight: 700; color: var(--accent); }
 .rb-preview { display: block; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .eb-label { font-size: 12px; font-weight: 700; color: var(--accent); }
-.field { flex: 1; min-width: 0; }
+
+/* textarea dibungkus bubble rounded */
+.field {
+  flex: 1; min-width: 0;
+  display: flex; align-items: flex-end;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 22px; padding: 4px 6px 4px 14px;
+}
+.field:focus-within { border-color: var(--accent); }
 .counter { font-size: 11px; text-align: right; margin-top: 2px; }
 .counter.err { color: var(--danger); }
-.send-btn { flex: none; display: inline-flex; align-items: center; justify-content: center; padding: 0 14px; }
+
+/* tombol media: rounded, subtle */
+.media-btn {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: transparent; color: var(--muted); border: none; cursor: pointer;
+  transition: background 140ms var(--ease-out), color 140ms var(--ease-out), transform 140ms var(--ease-out);
+}
+.media-btn:hover { background: var(--surface-2); color: var(--fg); }
+.media-btn:active { transform: scale(0.94); }
+
+/* tombol kirim: rounded-full accent, menyatu di kanan bubble */
+.send-btn {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; border-radius: 50%;
+  background: var(--accent); color: var(--accent-fg); border: none; cursor: pointer;
+  transition: transform 140ms var(--ease-out), opacity 140ms var(--ease-out), background 140ms var(--ease-out);
+}
+.send-btn:active:not(:disabled) { transform: scale(0.94); }
+.send-btn:disabled { opacity: .4; cursor: not-allowed; }
+
 .jump-btn {
   flex: none; position: relative; display: inline-flex; align-items: center; justify-content: center;
   width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border);

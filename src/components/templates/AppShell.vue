@@ -672,6 +672,8 @@ const activePartnerOnline = computed(() => room.partnerOnline)
 .shell { display: flex; height: 100vh; height: 100dvh; overflow: hidden; }
 .pane-sidebar { flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--border); min-width: 0; }
 .pane-chat { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+/* FAB search: default HIDDEN (desktop), cuma muncul di mobile via media query */
+.search-fab { display: none; }
 .divider { width: 5px; flex: none; cursor: col-resize; background: transparent; transition: background .15s; }
 .divider:hover { background: var(--accent); }
 .empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--muted); gap: 8px; }
@@ -681,8 +683,7 @@ const activePartnerOnline = computed(() => room.partnerOnline)
   .pane-sidebar { width: 100% !important; height: 100%; }
   .pane-chat { width: 100% !important; height: 100%; }
   .hide-mobile { display: none; }
-  /* FAB search kanan bawah (desktop disembunyikan) */
-  .hide-desktop { display: none; }
+  /* FAB search kanan bawah (HANYA mobile; default hidden di .search-fab) */
   .search-fab {
     display: inline-flex; align-items: center; justify-content: center;
     position: absolute; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom));

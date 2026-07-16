@@ -15,7 +15,7 @@ const toast = useToastStore()
 
 <style scoped>
 .toast-wrap {
-  position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+  position: fixed; top: calc(env(safe-area-inset-top) + 64px); left: 50%; transform: translateX(-50%);
   display: flex; flex-direction: column; gap: 8px; z-index: 9999; pointer-events: none;
 }
 .toast {
