@@ -68,12 +68,12 @@ export async function listConversations() {
     profs?.forEach((p) => (profilesMap[p.id] = p))
   }
 
+  // sort by pesan terbaru (recent di atas); conv kosong (ga ada pesan) di bawah
+  const recent = await recentAtMap(convIds)
   const list = convIds.map((cid) => {
     const partnerId = members.find((m) => m.conversation_id === cid && m.user_id !== me)?.user_id
     return { conversationId: cid, partner: profilesMap[partnerId] || { id: partnerId }, _ts: recent[cid] || '0' }
   })
-  // sort by pesan terbaru (recent di atas); conv kosong (ga ada pesan) di bawah
-  const recent = await recentAtMap(convIds)
   list.sort((a, b) => {
     const ta = recent[a.conversationId] || '0'
     const tb = recent[b.conversationId] || '0'
