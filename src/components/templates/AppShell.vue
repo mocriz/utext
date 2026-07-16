@@ -441,6 +441,12 @@ async function onSend() {
   await sendText(cid, activePartner.value.id, text, replyId) // kirim ISI ASLI (spasi depan dipertahankan)
   conv.setLast(cid, text.trim())
   room.messages.push(enrich({ id: crypto.randomUUID(), senderId: myId.value, plaintext: text, createdAt: new Date().toISOString(), reply_to: replyId, receipt: 'sent' }))
+  // kalau chat ke AI bot -> panggil Edge Function (trigger pg_net gak reliable di plan ini)
+  if (activePartner.value?.id === 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb') {
+    supabase.functions.invoke('bot-reply', {
+      body: { record: { sender_id: myId.value, conversation_id: cid } },
+    }).catch((e) => console.warn('bot invoke failed:', e?.message))
+  }
   refocusComposer() // safety net: pastikan textarea tetap fokus (keyboard nyala)
   scrollToBottomHard() // kirim -> SELALU loncat ke bawah (walau user lagi di atas)
 }
