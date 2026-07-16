@@ -3,8 +3,8 @@ import { defineStore } from 'pinia'
 
 const PRESETS = ['default', 'nord', 'ocean', 'mono']
 
-// wallpaper chat: none | dots | scribble | grid | waves
-const WALLPAPERS = ['none', 'dots', 'scribble', 'grid', 'waves']
+// wallpaper chat: none | dots | grid | scribble | waves | hearts | triangles | lines
+const WALLPAPERS = ['none', 'dots', 'grid', 'scribble', 'waves', 'hearts', 'triangles', 'lines']
 
 function applyVars(vars) {
   const root = document.documentElement

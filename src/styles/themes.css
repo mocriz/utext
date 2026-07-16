@@ -122,3 +122,15 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40' viewBox='0 0 80 40'%3E%3Cg fill='none' stroke='%2399a' stroke-opacity='0.22' stroke-width='1.2'%3E%3Cpath d='M0 20 Q20 5 40 20 T80 20'/%3E%3Cpath d='M0 30 Q20 15 40 30 T80 30'/%3E%3C/g%3E%3C/svg%3E");
   background-size: 80px 40px;
 }
+[data-wallpaper='hearts'] .chat-panel {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Cpath fill='%23e2556b' fill-opacity='0.18' d='M30 38 C30 38 14 27 14 18 a8 8 0 0 1 16 -3 a8 8 0 0 1 16 3 C46 27 30 38 30 38 Z'/%3E%3C/svg%3E");
+  background-size: 60px 60px;
+}
+[data-wallpaper='triangles'] .chat-panel {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='42' viewBox='0 0 48 42'%3E%3Cg fill='none' stroke='%2399a' stroke-opacity='0.2' stroke-width='1.2'%3E%3Cpath d='M24 4 L44 38 L4 38 Z'/%3E%3Cpath d='M24 42 L44 8 L4 8 Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 48px 42px;
+}
+[data-wallpaper='lines'] .chat-panel {
+  background-image: repeating-linear-gradient(45deg, var(--border) 0, var(--border) 1px, transparent 1px, transparent 14px);
+  background-size: 20px 20px;
+}

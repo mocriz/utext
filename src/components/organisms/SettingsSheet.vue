@@ -83,11 +83,11 @@
               </div>
               <div class="field">
                 <label>Preset</label>
-                <div class="inline">
-                  <select class="select" :value="theme.custom ? '' : theme.preset" @change="theme.setPreset($event.target.value)">
-                    <option v-for="p in theme.presets" :key="p" :value="p" :selected="theme.preset === p && !theme.custom">{{ p }}</option>
-                  </select>
-                </div>
+                <Dropdown
+                  :model-value="theme.custom ? '' : theme.preset"
+                  :options="presetOptions"
+                  @update:model-value="theme.setPreset($event)"
+                />
               </div>
               <div class="field">
                 <label>Warna kustom</label>
@@ -98,9 +98,11 @@
               </div>
               <div class="field">
                 <label>Wallpaper chat</label>
-                <div class="chips">
-                  <button v-for="w in theme.wallpapers" :key="w" class="chip" :class="{ active: theme.wallpaper === w }" @click="theme.setWallpaper(w)">{{ w }}</button>
-                </div>
+                <Dropdown
+                  :model-value="theme.wallpaper"
+                  :options="wallpaperOptions"
+                  @update:model-value="theme.setWallpaper($event)"
+                />
               </div>
             </section>
 
@@ -155,6 +157,7 @@ import TextInput from '../atoms/TextInput.vue'
 import BaseButton from '../atoms/BaseButton.vue'
 import Toggle from '../atoms/Toggle.vue'
 import Icon from '../atoms/Icon.vue'
+import Dropdown from '../atoms/Dropdown.vue'
 import { useThemeStore } from '../../stores/theme'
 import { isUsernameAvailable } from '../../lib/auth'
 import { useToastStore } from '../../stores/toast'
@@ -168,6 +171,9 @@ const props = defineProps({
 const emit = defineEmits(['close', 'backup', 'restore', 'save-username', 'save-display', 'avatar', 'delete-account', 'update:prefs'])
 const theme = useThemeStore()
 const toast = useToastStore()
+
+const presetOptions = computed(() => theme.presets.map((p) => ({ label: p, value: p })))
+const wallpaperOptions = computed(() => theme.wallpapers.map((w) => ({ label: w, value: w })))
 
 const section = ref('profile')
 const usernameDraft = ref(props.profile?.username || '')
