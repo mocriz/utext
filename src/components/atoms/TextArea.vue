@@ -71,10 +71,10 @@ defineExpose({ focus: () => el.value?.focus(), blur: () => el.value?.blur() })
 <style scoped>
 .ta {
   width: 100%;
-  padding: 9px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
+  padding: 7px 8px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   color: var(--fg);
   font-size: 14px;
   line-height: 1.4;
@@ -82,9 +82,7 @@ defineExpose({ focus: () => el.value?.focus(), blur: () => el.value?.blur() })
   outline: none;
   resize: none;
   overflow-y: auto;
-  transition: border-color .15s;
 }
-.ta:focus { border-color: var(--accent); }
 .ta:disabled { opacity: .6; cursor: not-allowed; }
 /* scrollbar ramping, hanya muncul kalau overflow (class .scroll di-set pas autoResize) */
 .ta { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
