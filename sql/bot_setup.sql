@@ -112,8 +112,11 @@ begin
   perform net.http_post(
     url := 'https://sgmiqkqigfmwgiajaqvo.supabase.co/functions/v1/bot-reply',
     body := json_build_object('record', row_to_json(NEW))::text,
-    headers := '{"Content-Type":"application/json"}'::jsonb,
-    timeout_milliseconds := 1000
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer <ANON_KEY_LU>'
+    ),
+    timeout_milliseconds := 5000
   );
   return null;
 exception when others then

@@ -6,8 +6,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import sodium from 'https://esm.sh/libsodium-wrappers@0.7.11'
 
-const BOT_PRIVATE_KEY = Deno.env.get('BOT_PRIVATE_KEY')!   // base64 X25519 priv
-const BOT_USER_ID     = Deno.env.get('BOT_USER_ID')!       // uuid bot
+const BOT_PRIVATE_KEY = Deno.env.get('BOT_PRIVATE_KEY')   // base64 X25519 priv
+const BOT_USER_ID     = Deno.env.get('BOT_USER_ID')       // uuid bot
 const SUPABASE_URL    = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
@@ -49,6 +49,9 @@ Deno.serve(async (req) => {
     const ct       = rec.ciphertext
     const nonce    = rec.nonce
 
+    // diagnostic: cek secret kebaca atau gak
+    if (!BOT_PRIVATE_KEY) return json({ ok: false, error: 'BOT_PRIVATE_KEY not set / empty' })
+
     // guard: jangan proses pesan dari bot sendiri (anti echo loop)
     if (!senderId || senderId === BOT_USER_ID) return json({ ok: true, skipped: 'bot self' })
     if (!convId || !ct || !nonce) return json({ ok: true, skipped: 'incomplete' })
@@ -69,9 +72,14 @@ Deno.serve(async (req) => {
     if (!prof?.public_key) return json({ ok: false, error: 'no user pubkey' })
 
     // decrypt pesan user
-    const ss = deriveSharedSecret(BOT_PRIVATE_KEY, prof.public_key)
+    let ss = ''
+    try { ss = deriveSharedSecret(BOT_PRIVATE_KEY, prof.public_key) }
+    catch { return json({ ok: false, error: 'deriveSharedSecret failed (BOT_PRIVATE_KEY or pubkey invalid base64)' }) }
     let userText = ''
-    try { userText = decryptText(ss, ct, nonce) } catch { return json({ ok: false, error: 'decrypt failed' }) }
+    try { userText = decryptText(ss, ct, nonce) }
+    catch (e) {
+      return json({ ok: false, error: 'decrypt failed (wrong secret key / ciphertext mismatch)', detail: String(e?.message || e) })
+    }
     if (!userText.trim()) return json({ ok: true, skipped: 'empty' })
 
     // ambil history singkat (3 pesan terakhir dari user & bot) buat konteks
