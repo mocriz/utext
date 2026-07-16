@@ -15,12 +15,8 @@
 
     <!-- mode normal -->
     <template v-else>
-      <div class="left">
-        <Avatar :src="profile?.avatar_url" :name="profile?.display_name || profile?.username" size="md" />
-      </div>
-      <div class="center">uText</div>
+      <div class="brand">uText</div>
       <div class="right">
-        <IconButton name="mdi:magnify" title="Cari" class="search hide-mobile-search" @click="$emit('open-search')" />
         <MoreMenu :settings="prefs" @navigate="$emit('navigate', $event)" @logout="$emit('logout')" />
       </div>
     </template>
@@ -29,12 +25,9 @@
 
 <script setup>
 import { ref, watch, nextTick } from 'vue'
-import IconButton from '../atoms/IconButton.vue'
-import Avatar from '../atoms/Avatar.vue'
 import MoreMenu from '../molecules/MoreMenu.vue'
 
 const props = defineProps({
-  profile: { type: Object, default: null },
   prefs: { type: Object, default: () => ({ readReceipt: true, onlineIndicator: true }) },
   searching: { type: Boolean, default: false },
   query: { type: String, default: '' },
@@ -48,14 +41,13 @@ watch(() => props.searching, (v) => { if (v) nextTick(() => input.value?.focus()
 
 <style scoped>
 .app-header {
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+  display: flex; align-items: center; justify-content: space-between;
   height: 56px; box-sizing: border-box; padding: 8px 12px;
   border-bottom: 1px solid var(--border); background: var(--surface);
 }
 .app-header.searching { display: flex; gap: 8px; }
-.left { justify-self: start; }
-.center { justify-self: center; font-weight: 700; font-size: 16px; letter-spacing: .04em; }
-.right { justify-self: end; display: flex; align-items: center; gap: 2px; }
+.brand { font-weight: 700; font-size: 16px; letter-spacing: .04em; }
+.right { display: flex; align-items: center; gap: 2px; }
 .search-input {
   flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
   background: var(--bg); color: var(--fg); font-size: 14px; outline: none;

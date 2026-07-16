@@ -3,7 +3,6 @@
     <div class="pane-sidebar" :class="{ 'hide-mobile': ui.mobileView === 'chat' }" :style="{ width: sidebarWidth + 'px' }">
       <AppHeader
         :prefs="prefs"
-        :profile="auth.profile"
         :searching="searching"
         :query="searchQuery"
         @open-search="openSearch"
