@@ -689,6 +689,7 @@ const activePartnerOnline = computed(() => room.partnerOnline)
     width: 52px; height: 52px; border-radius: 50%;
     background: var(--accent); color: #fff; border: none; cursor: pointer;
     box-shadow: 0 4px 14px rgba(0,0,0,.35); z-index: 20;
+    transition: transform 140ms var(--ease-out), background 140ms var(--ease-out);
   }
   .search-fab:active { transform: scale(.94); }
 }

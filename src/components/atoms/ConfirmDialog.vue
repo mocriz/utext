@@ -1,7 +1,8 @@
 <template>
   <teleport to="body">
-    <div v-if="state.show" class="confirm-backdrop" @click="cancel">
-      <div class="confirm" @click.stop>
+    <Transition name="confirm">
+      <div v-if="state.show" class="confirm-backdrop" @click="cancel">
+        <div class="confirm" @click.stop>
         <div class="title">{{ state.title }}</div>
         <div class="msg">{{ state.message }}</div>
         <div class="actions">
@@ -9,8 +10,9 @@
           <button class="btn danger" :class="{ danger: state.danger }" @click="ok">{{ state.confirmText || 'Ya' }}</button>
         </div>
       </div>
-    </div>
-  </teleport>
+      </div>
+      </Transition>
+      </teleport>
 </template>
 
 <script setup>
@@ -38,6 +40,11 @@ defineExpose({ open })
 <style scoped>
 .confirm-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .confirm { width: 100%; max-width: 360px; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
+/* enter/exit: backdrop fade + dialog scale from center */
+.confirm-enter-active, .confirm-leave-active { transition: opacity 180ms var(--ease-out); }
+.confirm-enter-active .confirm, .confirm-leave-active .confirm { transition: transform 200ms var(--ease-out), opacity 200ms var(--ease-out); }
+.confirm-enter-from, .confirm-leave-to { opacity: 0; }
+.confirm-enter-from .confirm, .confirm-leave-to .confirm { transform: scale(0.95); opacity: 0; }
 .title { font-weight: 700; font-size: 16px; margin-bottom: 8px; color: var(--fg); }
 .msg { font-size: 14px; color: var(--muted); margin-bottom: 18px; line-height: 1.45; }
 .actions { display: flex; justify-content: flex-end; gap: 10px; }

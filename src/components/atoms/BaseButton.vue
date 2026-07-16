@@ -32,10 +32,11 @@ defineEmits(['click'])
   cursor: pointer;
   font-weight: 600;
   line-height: 1;
-  transition: background .15s, opacity .15s;
+  transition: background 140ms var(--ease-out), opacity 140ms var(--ease-out), transform 140ms var(--ease-out);
   white-space: nowrap;
 }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn:active:not(:disabled) { transform: scale(0.97); }
 .md { padding: 8px 14px; font-size: 14px; }
 .sm { padding: 5px 10px; font-size: 13px; }
 .lg { padding: 11px 18px; font-size: 15px; }

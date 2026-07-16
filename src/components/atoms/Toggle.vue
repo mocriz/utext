@@ -18,7 +18,7 @@ defineEmits(['click'])
 .toggle.on { background: var(--accent); }
 .knob {
   position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
-  border-radius: 50%; background: #fff; transition: left .15s;
+  border-radius: 50%; background: #fff; transition: left 160ms var(--ease-out);
 }
 .toggle.on .knob { left: 20px; }
 </style>

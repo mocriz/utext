@@ -1,7 +1,8 @@
 <template>
   <teleport to="body">
-    <div v-if="open" class="sheet-backdrop" @click="$emit('close')">
-      <div class="sheet" @click.stop>
+    <Transition name="sheet">
+      <div v-if="open" class="sheet-backdrop" @click="$emit('close')">
+        <div class="sheet" @click.stop>
         <header class="sh">
           <button class="ic" title="Tutup" @click="$emit('close')">
             <Icon name="mdi:close" :size="20" />
@@ -135,6 +136,7 @@
         </div>
       </div>
     </div>
+  </Transition>
   </teleport>
 </template>
 
@@ -214,6 +216,11 @@ function confirmDelete() { emit('delete-account') }
 <style scoped>
 .sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 80; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .sheet { width: 100%; max-width: 720px; max-height: 90vh; display: flex; flex-direction: column; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+/* enter/exit: backdrop fade + sheet scale from center (modal exempt from origin-aware) */
+.sheet-enter-active, .sheet-leave-active { transition: opacity 200ms var(--ease-out); }
+.sheet-enter-active .sheet, .sheet-leave-active .sheet { transition: transform 220ms var(--ease-out), opacity 220ms var(--ease-out); }
+.sheet-enter-from, .sheet-leave-to { opacity: 0; }
+.sheet-enter-from .sheet, .sheet-leave-to .sheet { transform: scale(0.96); opacity: 0; }
 .sh { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
 .sh .title { font-weight: 700; font-size: 16px; }
 .ic { width: 36px; height: 36px; border: none; background: transparent; color: var(--muted); border-radius: 50%; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }

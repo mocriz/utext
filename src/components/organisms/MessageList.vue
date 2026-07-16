@@ -93,9 +93,11 @@ defineExpose({ scrollToBottom, scrollToId: jumpTo, isAtBottom: () => atBottom.va
 <style scoped>
 .msgs { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 4px; }
 .hint { color: var(--muted); font-size: 13px; text-align: center; margin: auto; }
-:deep(.flash) { animation: flash 1.5s ease; }
+:deep(.flash) {
+  animation: flash 0.9s var(--ease-out);
+}
 @keyframes flash {
-  0%, 100% { background: transparent; }
-  20%, 60% { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  0%, 100% { box-shadow: inset 0 0 0 0 transparent; }
+  30% { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent); }
 }
 </style>

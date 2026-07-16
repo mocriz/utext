@@ -26,6 +26,12 @@ const toast = useToastStore()
 .toast.success { background: #16a34a; }
 .toast.error { background: #dc2626; }
 .toast.info { background: #2563eb; }
-.toast-enter-active, .toast-leave-active { transition: all .25s ease; }
-.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(10px); }
+.toast-enter-active, .toast-leave-active {
+  transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out);
+}
+/* enter & exit SAMA arah: dari atas (translateY negatif) karena toast di top:18px */
+.toast-enter-from, .toast-leave-to {
+  opacity: 0;
+  transform: translateY(-100%);
+}
 </style>

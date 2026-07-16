@@ -1,25 +1,27 @@
 <template>
   <teleport to="body">
-    <div v-if="src" class="mv-backdrop" @click="close">
-      <button class="mv-close" @click.stop="close" title="Tutup (Esc)"><Icon name="mdi:close" :size="22" /></button>
-      <div
-        class="mv-stage"
-        @click.stop
-        @wheel.prevent="onWheel"
-        @touchstart.passive="onTouchStart"
-        @touchmove.prevent="onTouchMove"
-        @dblclick="reset"
-      >
-        <img
-          class="mv-img"
-          :src="src"
-          :style="{ transform: `translate(${tx}px, ${ty}px) scale(${scale})` }"
-          draggable="false"
-          @mousedown.prevent="onDragStart"
-        />
+    <Transition name="mv">
+      <div v-if="src" class="mv-backdrop" @click="close">
+        <button class="mv-close" @click.stop="close" title="Tutup (Esc)"><Icon name="mdi:close" :size="22" /></button>
+        <div
+          class="mv-stage"
+          @click.stop
+          @wheel.prevent="onWheel"
+          @touchstart.passive="onTouchStart"
+          @touchmove.prevent="onTouchMove"
+          @dblclick="reset"
+        >
+          <img
+            class="mv-img"
+            :src="src"
+            :style="{ transform: `translate(${tx}px, ${ty}px) scale(${scale})` }"
+            draggable="false"
+            @mousedown.prevent="onDragStart"
+          />
+        </div>
+        <div class="mv-hint">Scroll / pinch: zoom · drag: geser · Esc: tutup</div>
       </div>
-      <div class="mv-hint">Scroll / pinch: zoom · drag: geser · Esc: tutup</div>
-    </div>
+    </Transition>
   </teleport>
 </template>
 
@@ -89,5 +91,8 @@ onBeforeUnmount(() => { window.removeEventListener('keydown', onKey); onDragEnd(
 .mv-img:active { cursor: grabbing; }
 .mv-close { position: fixed; top: 16px; right: 18px; width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(255,255,255,.15); color: #fff; font-size: 18px; cursor: pointer; z-index: 501; }
 .mv-close:hover { background: rgba(255,255,255,.3); }
+/* enter/exit: backdrop fade only (jangan animasi .mv-img — dipakai utk zoom inline) */
+.mv-enter-active, .mv-leave-active { transition: opacity 160ms var(--ease-out); }
+.mv-enter-from, .mv-leave-to { opacity: 0; }
 .mv-hint { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,.7); font-size: 12px; }
 </style>

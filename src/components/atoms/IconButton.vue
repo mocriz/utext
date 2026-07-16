@@ -31,9 +31,10 @@ const iconSize = sizes['md']
   color: var(--muted);
   border-radius: 50%;
   cursor: pointer;
-  transition: background .15s, color .15s;
+  transition: background 140ms var(--ease-out), color 140ms var(--ease-out), transform 140ms var(--ease-out);
 }
 .icon-btn:hover { background: var(--surface-2); color: var(--fg); }
+.icon-btn:active:not(:disabled) { transform: scale(0.94); }
 .md { width: 38px; height: 38px; font-size: 18px; }
 .sm { width: 30px; height: 30px; font-size: 15px; }
 .lg { width: 46px; height: 46px; font-size: 22px; }

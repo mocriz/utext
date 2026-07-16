@@ -71,9 +71,10 @@ h1 { font-size: 28px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 8px;
   display: flex; align-items: center; justify-content: center; gap: 10px;
   width: 100%; padding: 13px 18px; border: 1px solid var(--border); border-radius: 12px;
   background: var(--surface); color: var(--fg); font-size: 15px; font-weight: 600; cursor: pointer;
-  transition: background .15s, border-color .15s;
+  transition: background 140ms var(--ease-out), border-color 140ms var(--ease-out), transform 140ms var(--ease-out);
 }
 .google:hover:not(:disabled) { background: var(--surface-2); border-color: var(--accent); }
+.google:active:not(:disabled) { transform: scale(0.98); }
 .google:disabled { opacity: .6; cursor: default; }
 .foot { color: var(--muted); font-size: 12px; line-height: 1.5; text-align: center; margin: 0; }
 </style>
