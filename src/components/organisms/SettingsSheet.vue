@@ -43,7 +43,7 @@
                 <label>Username</label>
                 <div class="inline">
                   <TextInput v-model="usernameDraft" placeholder="username" @update:model-value="onUsernameType" />
-                  <BaseButton size="sm" variant="primary" :disabled="!usernameDraft || saving || usernameStatus === 'taken'" @click="saveUsername" title="Simpan"><Icon name="mdi:check" :size="18" /></BaseButton>
+                  <BaseButton size="sm" variant="primary" :disabled="!usernameDraft || saving || usernameStatus === 'taken'" @click="saveUsername" title="Simpan">Simpan</BaseButton>
                 </div>
                 <p v-if="usernameStatus === 'checking'" class="hint">Memeriksa ketersediaan…</p>
                 <p v-else-if="usernameStatus === 'available'" class="ok">Username tersedia</p>
@@ -55,14 +55,14 @@
               <div class="field">
                 <label>Nama tampilan</label>
                 <TextInput v-model="displayDraft" placeholder="Nama tampilan" />
-                <BaseButton size="sm" variant="primary" :disabled="saving" style="margin-top:8px" @click="saveDisplay" title="Simpan"><Icon name="mdi:check" :size="18" /></BaseButton>
+                <BaseButton size="sm" variant="primary" :disabled="saving" style="margin-top:8px" @click="saveDisplay">Simpan</BaseButton>
               </div>
 
               <div class="field">
                 <label>Foto profil</label>
                 <div class="inline">
                   <input ref="avatarInput" type="file" accept="image/*" hidden @change="onAvatar" />
-                  <BaseButton size="sm" variant="subtle" @click="avatarInput?.click()" title="Pilih foto"><Icon name="mdi:image-outline" :size="18" /></BaseButton>
+                  <BaseButton size="sm" variant="subtle" @click="avatarInput?.click()">Pilih foto</BaseButton>
                   <span class="muted small">{{ avatarName || 'Foto default dari Google' }}</span>
                 </div>
               </div>
@@ -108,11 +108,11 @@
                 <label>Backup &amp; Restore</label>
                 <div class="row">
                   <p class="muted small">Simpan kunci rahasia ke Google Drive agar bisa dipulihkan dari perangkat lain.</p>
-                  <BaseButton size="sm" variant="subtle" :disabled="backing" @click="$emit('backup')" title="Backup"><Icon name="mdi:cloud-upload-outline" :size="18" /></BaseButton>
+                  <BaseButton size="sm" variant="subtle" :disabled="backing" @click="$emit('backup')">Backup</BaseButton>
                 </div>
                 <div class="row" v-if="identityStatus === 'need_restore' || identityStatus === 'new'">
                   <span class="muted small">Pulihkan kunci dari Google Drive</span>
-                  <BaseButton size="sm" variant="subtle" :disabled="backing" @click="$emit('restore')" title="Pulihkan"><Icon name="mdi:cloud-download-outline" :size="18" /></BaseButton>
+                  <BaseButton size="sm" variant="subtle" :disabled="backing" @click="$emit('restore')">Pulihkan</BaseButton>
                 </div>
               </div>
 
@@ -135,7 +135,7 @@
               <div class="field danger-zone">
                 <label>Hapus akun</label>
                 <p class="muted small">Hapus akun (soft delete). Percakapan di sisi lawan tetap tersimpan, dan kamu bisa masuk kembali lewat Gmail yang sama.</p>
-                <BaseButton variant="danger" :disabled="deleting" @click="confirmDelete" title="Hapus akun"><Icon name="mdi:delete-forever-outline" :size="18" /></BaseButton>
+                <BaseButton variant="danger" :disabled="deleting" @click="confirmDelete">Hapus akun</BaseButton>
               </div>
             </section>
           </div>
