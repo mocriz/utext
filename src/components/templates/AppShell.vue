@@ -290,10 +290,18 @@ async function onOpen(c) {
   // update last message di list (decrypted)
   const last = room.messages[room.messages.length - 1]
   if (last) conv.setLast(c.conversationId, last.plaintext || 'Foto')
-  // scroll ke bawah (pesan terbaru) — jalan di semua device
-  await nextTick()
-  chatPanel.value?.scrollToBottom()
+  // scroll ke bawah (pesan terbaru) — berulang biar mentok bener walau foto masih load
+  scrollToBottomHard()
   focusComposer() // desktop auto-focus; mobile skip biar ga langsung popup keyboard
+}
+
+// scroll ke bawah chat, diulang beberapa kali untuk catch layout shift
+// (foto async load nambah tinggi SETELAH render -> butuh re-scroll)
+function scrollToBottomHard() {
+  nextTick(() => chatPanel.value?.scrollToBottom())
+  requestAnimationFrame(() => chatPanel.value?.scrollToBottom())
+  setTimeout(() => chatPanel.value?.scrollToBottom(), 60)
+  setTimeout(() => chatPanel.value?.scrollToBottom(), 250)
 }
 
 // Tandai semua pesan partner di room ini sebagai read di LOCAL (langsung 2 biru, ga nunggu RPC)
@@ -433,6 +441,7 @@ async function onSend() {
   conv.setLast(cid, text.trim())
   room.messages.push(enrich({ id: crypto.randomUUID(), senderId: myId.value, plaintext: text, createdAt: new Date().toISOString(), reply_to: replyId, receipt: 'sent' }))
   refocusComposer() // tetap focus (keyboard tetap nyala) habis kirim
+  scrollToBottomHard() // kirim -> SELALU loncat ke bawah (walau user lagi di atas)
 }
 
 // ---- photo (preview dulu) ----
