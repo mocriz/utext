@@ -38,6 +38,17 @@ const lastCall = new Map<string, number>()
 const THROTTLE_MS = 1500
 
 Deno.serve(async (req) => {
+  // preflight CORS dari browser (functions.invoke)
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', {
+      status: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      },
+    })
+  }
   try {
     const payload = await req.json()
     // DB Webhook v1: { type, table, record, ... }
@@ -140,6 +151,14 @@ Deno.serve(async (req) => {
   }
 })
 
-function json(o: any) {
-  return new Response(JSON.stringify(o), { headers: { 'Content-Type': 'application/json' } })
+function json(o: any, status = 200) {
+  return new Response(JSON.stringify(o), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    },
+  })
 }

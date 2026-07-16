@@ -198,9 +198,14 @@ function sodium_b64_to_bytes(b64) {
 
 // Subscribe realtime pesan baru (Postgres Changes) + fallback polling 3s
 // (biar ga perlu klik nama kalau WS ga connect)
+const msgChannels = new Map()
 export function subscribeMessages(conversationId, onNew, onUpdate) {
   let lastSeen = Date.now()
   let polling = false
+
+  // reuse: kalau sudah ada channel untuk conv ini, unsub dulu (hindari "add callback after subscribe")
+  const prev = msgChannels.get(conversationId)
+  if (prev) { try { supabase.removeChannel(prev) } catch {} msgChannels.delete(conversationId) }
 
   const channel = supabase
     .channel('msgs:' + conversationId)
@@ -239,6 +244,7 @@ export function subscribeMessages(conversationId, onNew, onUpdate) {
       }
     )
     .subscribe((status) => {
+      msgChannels.set(conversationId, channel)
       console.log('[realtime]', conversationId, status)
       if (status === 'SUBSCRIBED') {
         // WS jalan -> stop polling
