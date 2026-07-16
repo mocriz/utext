@@ -580,7 +580,7 @@ function jumpTo(id) {
   showJumpBtn.value = false
 }
 function onJumpBottom() {
-  chatPanel.value?.scrollToBottom()
+  chatPanel.value?.scrollToBottom(true) // smooth pas tombol di-tap
   newMsgCount.value = 0
   showJumpBtn.value = false
 }

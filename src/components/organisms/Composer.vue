@@ -45,17 +45,6 @@
     >
       <Icon name="mdi:send" :size="20" />
     </button>
-
-    <!-- tombol loncat ke bawah (muncul kalau ada pesan baru & user di atas) -->
-    <button
-      v-if="showJump"
-      class="jump-btn"
-      title="Lihat pesan baru"
-      @click="$emit('jump-bottom')"
-    >
-      <Icon name="mdi:chevron-down" :size="20" />
-      <span v-if="newCount > 0" class="badge">{{ newCount > 99 ? '99+' : newCount }}</span>
-    </button>
   </div>
 </template>
 
@@ -69,8 +58,6 @@ const props = defineProps({
   preview: { type: Object, default: null },
   replyTo: { type: Object, default: null },
   editing: { type: Object, default: null },
-  showJump: { type: Boolean, default: false },
-  newCount: { type: Number, default: 0 },
 })
 const ta = ref(null)
 const fileInput = ref(null)
@@ -78,7 +65,7 @@ const MAX = 4096
 
 const emit = defineEmits([
   'update:draft', 'typing', 'send', 'pick', 'confirm-photo', 'cancel-photo',
-  'cancel-reply', 'cancel-edit', 'paste-image', 'jump-bottom',
+  'cancel-reply', 'cancel-edit', 'paste-image',
 ])
 
 const len = computed(() => props.draft.length)
@@ -150,14 +137,4 @@ defineExpose({ focus: () => ta.value?.focus() })
 .send-btn:active:not(:disabled) { transform: scale(0.94); }
 .send-btn:disabled { opacity: .4; cursor: not-allowed; }
 
-.jump-btn {
-  flex: none; position: relative; display: inline-flex; align-items: center; justify-content: center;
-  width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--border);
-  background: var(--surface-2); color: var(--fg); cursor: pointer;
-}
-.jump-btn .badge {
-  position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px;
-  border-radius: 9px; background: var(--accent); color: #fff; font-size: 11px; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
-}
 </style>

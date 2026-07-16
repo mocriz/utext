@@ -70,10 +70,10 @@ watch(() => props.messages.length, async () => {
   }
 })
 
-function scrollToBottom() {
+function scrollToBottom(smooth = false) {
   const el = scroller.value
   if (!el) return
-  el.scrollTop = el.scrollHeight
+  el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' })
   atBottom.value = true
   emit('at-bottom-change', true)
 }
