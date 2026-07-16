@@ -586,7 +586,13 @@ function onJumpBottom() {
 }
 function onAtBottomChange(b) {
   atBottom = b
-  if (b) { newMsgCount.value = 0; showJumpBtn.value = false }
+  if (b) {
+    newMsgCount.value = 0
+    showJumpBtn.value = false
+  } else {
+    // user di atas (scroll manual ATAU pesan baru) -> tampilkan tombol loncat ke bawah
+    showJumpBtn.value = true
+  }
 }
 
 // ---- settings / more menu ----
