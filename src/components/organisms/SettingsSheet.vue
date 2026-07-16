@@ -94,6 +94,12 @@
                   <label class="swatch"><input type="color" v-model="bubble" @input="applyCustom" /> Bubble</label>
                 </div>
               </div>
+              <div class="field">
+                <label>Wallpaper chat</label>
+                <div class="chips">
+                  <button v-for="w in theme.wallpapers" :key="w" class="chip" :class="{ active: theme.wallpaper === w }" @click="theme.setWallpaper(w)">{{ w }}</button>
+                </div>
+              </div>
             </section>
 
             <!-- PRIVASI & AKUN -->

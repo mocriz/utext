@@ -65,4 +65,80 @@
   --bubble-me-fg: #e8eaed;
 }
 
+/* preset: ocean (dark, teal) */
+[data-theme='dark'][data-preset='ocean'] {
+  --accent: #2dd4bf;
+  --accent-fg: #06231f;
+  --bg: #07151a;
+  --surface: #0d2029;
+  --surface-2: #14323d;
+  --bubble-me: #0f5e57;
+  --bubble-me-fg: #e6fffb;
+}
+
+/* preset: forest (light, green) */
+[data-theme='light'][data-preset='forest'] {
+  --accent: #16a34a;
+  --accent-fg: #ffffff;
+  --bg: #f1f8f1;
+  --surface: #ffffff;
+  --surface-2: #eaf5ea;
+  --bubble-me: #c8efc8;
+  --bubble-me-fg: #11330f;
+}
+
+/* preset: lavender (light, purple) */
+[data-theme='light'][data-preset='lavender'] {
+  --accent: #7c3aed;
+  --accent-fg: #ffffff;
+  --bg: #f6f3ff;
+  --surface: #ffffff;
+  --surface-2: #efebff;
+  --bubble-me: #ddd0ff;
+  --bubble-me-fg: #2a1063;
+}
+
+/* preset: sunset (light, warm orange-pink) */
+[data-theme='light'][data-preset='sunset'] {
+  --accent: #f43f5e;
+  --accent-fg: #ffffff;
+  --bg: #fff4f1;
+  --surface: #ffffff;
+  --surface-2: #ffe9e4;
+  --bubble-me: #ffd0c4;
+  --bubble-me-fg: #5c151f;
+}
+
+/* preset: nord (dark, muted blue) */
+[data-theme='dark'][data-preset='nord'] {
+  --accent: #88c0d0;
+  --accent-fg: #1a1f29;
+  --bg: #1a1f29;
+  --surface: #242933;
+  --surface-2: #2e3440;
+  --bubble-me: #3b4252;
+  --bubble-me-fg: #eceff4;
+}
+
 /* custom theme (user-set) — vars di-inject lewat JS ke :root */
+
+/* ===== WALLPAPER doodle (chat panel) =====
+   Subtle pattern di atas --bg. Pakai --border biar nyambung tema. */
+[data-wallpaper='dots'] .chat-panel {
+  background-image: radial-gradient(var(--border) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
+}
+[data-wallpaper='grid'] .chat-panel {
+  background-image:
+    linear-gradient(to right, var(--border) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+[data-wallpaper='scribble'] .chat-panel {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%2399a' stroke-opacity='0.25' stroke-width='1.4'%3E%3Cpath d='M10 20 Q25 5 40 20 T70 20'/%3E%3Cpath d='M80 40 Q95 25 110 40 T20 60'/%3E%3Cpath d='M30 80 Q45 65 60 80 T90 90'/%3E%3Cpath d='M100 100 Q15 95 30 110'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+[data-wallpaper='waves'] .chat-panel {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='40' viewBox='0 0 80 40'%3E%3Cg fill='none' stroke='%2399a' stroke-opacity='0.22' stroke-width='1.2'%3E%3Cpath d='M0 20 Q20 5 40 20 T80 20'/%3E%3Cpath d='M0 30 Q20 15 40 30 T80 30'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 80px 40px;
+}

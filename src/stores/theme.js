@@ -1,7 +1,10 @@
 // src/stores/theme.js
 import { defineStore } from 'pinia'
 
-const PRESETS = ['default', 'midnight', 'solar', 'rose', 'mono']
+const PRESETS = ['default', 'midnight', 'solar', 'rose', 'mono', 'ocean', 'forest', 'lavender', 'sunset', 'nord']
+
+// wallpaper chat: none | dots | scribble | grid | waves
+const WALLPAPERS = ['none', 'dots', 'scribble', 'grid', 'waves']
 
 function applyVars(vars) {
   const root = document.documentElement
@@ -13,11 +16,13 @@ function applyVars(vars) {
 export const useThemeStore = defineStore('theme', {
   state: () => ({
     mode: 'light', // light | dark
-    preset: 'default', // default | midnight | solar | rose | mono
+    preset: 'default', // lihat PRESETS
     custom: null, // { accent, bubbleMe } kalau mode custom
+    wallpaper: 'none', // none | dots | scribble | grid | waves
   }),
   getters: {
     presets: () => PRESETS,
+    wallpapers: () => WALLPAPERS,
   },
   actions: {
     hydrate() {
@@ -27,6 +32,7 @@ export const useThemeStore = defineStore('theme', {
           this.mode = saved.mode || 'light'
           this.preset = saved.preset || 'default'
           this.custom = saved.custom || null
+          this.wallpaper = saved.wallpaper || 'none'
         } else {
           // default ikut system
           if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
@@ -38,13 +44,14 @@ export const useThemeStore = defineStore('theme', {
     },
     persist() {
       localStorage.setItem('utext_theme', JSON.stringify({
-        mode: this.mode, preset: this.preset, custom: this.custom,
+        mode: this.mode, preset: this.preset, custom: this.custom, wallpaper: this.wallpaper,
       }))
     },
     apply() {
       const root = document.documentElement
       root.setAttribute('data-theme', this.mode)
       root.setAttribute('data-preset', this.preset)
+      root.setAttribute('data-wallpaper', this.wallpaper)
       if (this.custom) {
         applyVars({ '--accent': this.custom.accent, '--bubble-me': this.custom.bubbleMe })
       } else {
@@ -53,6 +60,7 @@ export const useThemeStore = defineStore('theme', {
     },
     setMode(mode) { this.mode = mode; this.apply(); this.persist() },
     setPreset(preset) { this.preset = preset; this.custom = null; this.apply(); this.persist() },
+    setWallpaper(wp) { this.wallpaper = wp; this.apply(); this.persist() },
     setCustom({ accent, bubbleMe }) {
       this.custom = { accent, bubbleMe }
       this.apply(); this.persist()
