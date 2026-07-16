@@ -6,8 +6,8 @@
         <div class="title">{{ state.title }}</div>
         <div class="msg">{{ state.message }}</div>
         <div class="actions">
-          <button class="btn ghost" @click="cancel">Batal</button>
-          <button class="btn danger" :class="{ danger: state.danger }" @click="ok">{{ state.confirmText || 'Ya' }}</button>
+          <button class="btn ghost" @click="cancel" title="Batal"><Icon name="mdi:close" :size="18" /></button>
+          <button class="btn danger" :class="{ danger: state.danger }" @click="ok" :title="state.confirmText || 'Ya'"><Icon name="mdi:check" :size="18" /></button>
         </div>
       </div>
       </div>
@@ -17,6 +17,7 @@
 
 <script setup>
 import { reactive } from 'vue'
+import Icon from './Icon.vue'
 
 // cara pakai: const ok = await confirmDialog({ title, message, danger })
 // returns Promise<boolean>

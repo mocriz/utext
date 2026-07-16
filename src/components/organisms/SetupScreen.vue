@@ -11,7 +11,7 @@
           <Avatar :src="photoUrl || googleAvatar" :name="displayName || username || 'U'" size="lg" />
           <div class="photo-actions">
             <input ref="avatarInput" type="file" accept="image/*" hidden @change="onAvatar" />
-            <BaseButton size="sm" variant="subtle" @click="avatarInput?.click()">Pilih foto</BaseButton>
+            <BaseButton size="sm" variant="subtle" @click="avatarInput?.click()" title="Pilih foto"><Icon name="mdi:image-outline" :size="18" /></BaseButton>
             <span class="muted small">{{ avatarName || 'default dari Google' }}</span>
           </div>
         </div>
@@ -42,15 +42,15 @@
         <label>Backup Key ke Drive <span class="req">*</span></label>
         <div class="row">
           <span class="muted small">Wajib diisi — simpan kunci rahasia ke Google Drive agar bisa dipulihkan di perangkat lain.</span>
-          <BaseButton size="sm" variant="subtle" :disabled="backing" @click="onBackup">
-            {{ backedUp ? 'Tersimpan' : 'Backup' }}
+          <BaseButton size="sm" variant="subtle" :disabled="backing" @click="onBackup" title="Backup">
+            <Icon name="mdi:cloud-upload-outline" :size="18" />
           </BaseButton>
         </div>
         <p v-if="backupErr" class="err">{{ backupErr }}</p>
       </div>
 
-      <BaseButton variant="primary" :disabled="!canStart" @click="start">
-        {{ canStart ? 'Mulai' : 'Lengkapi username & backup' }}
+      <BaseButton variant="primary" :disabled="!canStart" @click="start" title="Mulai">
+        <Icon name="mdi:check-circle-outline" :size="20" />
       </BaseButton>
       <p v-if="!canStart" class="muted small center">Username & backup Drive wajib diisi.</p>
     </div>

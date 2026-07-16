@@ -5,6 +5,7 @@ import LoginScreen from './components/LoginScreen.vue'
 import SetupScreen from './components/organisms/SetupScreen.vue'
 import AppShell from './components/templates/AppShell.vue'
 import ToastHost from './components/atoms/ToastHost.vue'
+import Icon from './components/atoms/Icon.vue'
 
 const auth = useAuthStore()
 const showApp = computed(() => auth.isReady && auth.isAuthed && auth.identityStatus !== 'need_restore' && auth.setupDone)
@@ -26,9 +27,9 @@ const showSetup = computed(() => auth.isReady && auth.isAuthed && auth.identityS
   <AppShell v-else-if="showApp" />
   <div v-else class="boot">
     <p>Kunci belum tersedia.</p>
-    <button v-if="auth.identityStatus === 'need_restore' || auth.identityStatus === 'new'" @click="auth.restore()">Restore dari Drive</button>
-    <button @click="auth.startFresh()" v-if="auth.identityStatus === 'new' || auth.identityStatus === 'need_restore'">Mulai Baru</button>
-    <button @click="auth.backup()" v-if="auth.identityStatus === 'new'">Backup Key Baru</button>
+    <button v-if="auth.identityStatus === 'need_restore' || auth.identityStatus === 'new'" @click="auth.restore()" title="Restore dari Drive"><Icon name="mdi:cloud-download-outline" :size="18" /></button>
+    <button @click="auth.startFresh()" v-if="auth.identityStatus === 'new' || auth.identityStatus === 'need_restore'" title="Mulai Baru"><Icon name="mdi:plus-circle-outline" :size="18" /></button>
+    <button @click="auth.backup()" v-if="auth.identityStatus === 'new'" title="Backup Key Baru"><Icon name="mdi:cloud-upload-outline" :size="18" /></button>
   </div>
   <ToastHost />
 </template>

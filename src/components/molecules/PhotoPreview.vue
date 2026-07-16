@@ -4,8 +4,8 @@
     <div class="meta">
       <div class="fname">{{ name }}</div>
       <div class="actions">
-        <BaseButton variant="primary" size="sm" @click="$emit('send')">Kirim</BaseButton>
-        <BaseButton variant="ghost" size="sm" @click="$emit('cancel')">Batal</BaseButton>
+        <BaseButton variant="primary" size="sm" @click="$emit('send')" title="Kirim"><Icon name="mdi:send" :size="18" /></BaseButton>
+        <BaseButton variant="ghost" size="sm" @click="$emit('cancel')" title="Batal"><Icon name="mdi:close" :size="18" /></BaseButton>
       </div>
     </div>
   </div>

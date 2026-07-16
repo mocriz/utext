@@ -42,6 +42,10 @@ defineEmits(['click'])
 .lg { padding: 11px 18px; font-size: 15px; }
 .block { width: 100%; }
 
+/* icon-only button (cuma ada <svg>, gak ada teks) -> padding square biar centered */
+.btn:has(> svg:only-child) { padding: 8px; }
+.btn.sm:has(> svg:only-child) { padding: 8px; }
+
 .primary { background: var(--accent); color: var(--accent-fg); }
 .primary:hover:not(:disabled) { filter: brightness(1.07); }
 

@@ -41,6 +41,24 @@ body {
 
 button { font-family: inherit; }
 
+/* ===== Anti selection / tap-highlight di semua UI (mobile) =====
+   Hilangkan flash biru + text selection pas tap UI.
+   KECUALI input/textarea/contenteditable (biar bisa select & ngetik). */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+button, a, .mi, .ci, .chip, .nav-item, .icon-btn, .media-btn, .send-btn, .jump-btn, .toggle, .search-fab {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation; /* cegah delay 300ms + highlight double-tap zoom */
+}
+input, textarea, [contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-tap-highlight-color: transparent;
+}
+
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
 
