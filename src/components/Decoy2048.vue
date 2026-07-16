@@ -10,7 +10,7 @@
       <div class="score"><small>SCORE</small>{{ score }}</div>
     </header>
 
-    <!-- grid -->
+    <!-- board: chips absolut-positioned (slide via CSS transition) -->
     <div
       class="board"
       ref="boardEl"
@@ -20,11 +20,16 @@
       @mouseup="onMouseUp"
       @mouseleave="onMouseUp"
     >
-      <div v-for="n in 16" :key="n" class="cell">
-        <span v-if="tiles[n - 1]" class="tile" :class="'v' + tiles[n - 1]">{{ tiles[n - 1] }}</span>
-      </div>
+      <div
+        v-for="chip in chips"
+        :key="chip.id"
+        class="chip"
+        :class="'v' + chip.value"
+        :style="{ left: chipPct(chip.x), top: chipPct(chip.y) }"
+      >{{ chip.value }}</div>
     </div>
-    <p class="hint">Swipe / arrow keys to play</p>
+    <p class="hint" v-if="!gameOver">Swipe / arrow keys to play</p>
+    <p class="hint" v-else>Game over — refresh to retry</p>
 
     <!-- fake UI error (muncul setelah Morse ..-) -->
     <div v-if="showError" class="errbox" @click="onErrBoxClick">
@@ -40,7 +45,7 @@
       <button class="refresh" @click.stop="onRefresh">Refresh</button>
     </div>
 
-    <!-- PIN screen: blank + numeric -->
+    <!-- PIN screen (blank + numeric) -->
     <div v-if="showPin" class="pinwrap">
       <input
         ref="pinInput"
@@ -60,86 +65,29 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { useGame2048 } from '../lib/useGame2048'
 
 const emit = defineEmits(['reveal'])
+const { score, chips, init, doMove, gameOver, size } = useGame2048(4)
 
-/* ============ 2048 GAME (mekanik es-repo: rotate + slide kiri) ============ */
-const score = ref(0)
-// board 2D 4x4, board[y][x]
-const board = reactive(Array.from({ length: 4 }, () => [0, 0, 0, 0]))
-const tiles = computed(() => board.flat())   // biar template tetap pakai index 0..15
-
-function emptyCells() {
-  const e = []
-  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) if (!board[y][x]) e.push({ x, y })
-  return e
-}
-function spawn() {
-  const e = emptyCells()
-  if (!e.length) return
-  const { x, y } = e[Math.floor(Math.random() * e.length)]
-  board[y][x] = Math.random() < 0.8 ? 2 : 4
-}
-function init() {
-  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) board[y][x] = 0
-  score.value = 0
-  spawn(); spawn()
+// chip position: (x / size) * 100% dengan gap. pakai calc biar ada padding.
+function chipPct(i) {
+  const gap = 2.5 // % antar cell (approx, match gap di CSS)
+  const cell = 100 / size
+  return `calc(${i * cell}% + ${gap}%)`
 }
 
-// rotate koordinat (sama kayak es-repo)
-function rot0(c) { return c }
-function rot90(c) { return { x: c.y, y: c.x } }            // down
-function rot180(c) { return { x: 3 - c.x, y: c.y } }       // left
-function rot270(c) { return { x: c.y, y: 3 - c.x } }       // up
-
-// geser + merge ke arah "kiri" (x mengecil) pada board yang udah di-rotate
-function move(rotFn) {
-  if (showError.value || showPin.value) return
-  let moved = false
-  let scoreInc = 0
-  // 1) rotate board ke orientasi "kiri"
-  const rb = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]
-  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
-    const t = rotFn({ x, y })
-    rb[t.y][t.x] = board[y][x]
-  }
-  // 2) slide tiap baris ke kiri + merge
-  for (let y = 0; y < 4; y++) {
-    const row = rb[y].filter((v) => v)
-    for (let i = 0; i < row.length - 1; i++) {
-      if (row[i] === row[i + 1]) { row[i] *= 2; scoreInc += row[i]; row.splice(i + 1, 1) }
-    }
-    while (row.length < 4) row.push(0)
-    for (let x = 0; x < 4; x++) if (rb[y][x] !== row[x]) moved = true
-    rb[y] = row
-  }
-  if (!moved) return
-  // 3) rotate balik ke posisi asli (inverse rotation)
-  const inv = inverseRot(rotFn)
-  for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
-    const t = inv({ x, y })
-    board[t.y][t.x] = rb[y][x]
-  }
-  score.value += scoreInc
-  spawn()
-}
-// inverse rotation (biar tile balik ke posisi bener)
-function inverseRot(fn) {
-  if (fn === rot0) return rot0
-  if (fn === rot90) return rot270
-  if (fn === rot180) return rot180
-  return rot90
-}
+/* ============ INPUT ============ */
 function onKey(e) {
-  const m = { ArrowUp: rot270, ArrowRight: rot0, ArrowDown: rot90, ArrowLeft: rot180 }
-  if (e.key in m) { e.preventDefault(); move(m[e.key]) }
+  const m = { ArrowUp: 'up', ArrowRight: 'right', ArrowDown: 'down', ArrowLeft: 'left' }
+  if (e.key in m) { e.preventDefault(); doMove(m[e.key]) }
 }
 function computeSwipe(x, y) {
   const dx = x - swipeX, dy = y - swipeY
-  if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return // terlalu kecil, abaikan
-  if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? rot0 : rot180)
-  else move(dy > 0 ? rot90 : rot270)
+  if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return
+  if (Math.abs(dx) > Math.abs(dy)) doMove(dx > 0 ? 'right' : 'left')
+  else doMove(dy > 0 ? 'down' : 'up')
 }
 function onSwipe(e) {
   const t = e.changedTouches ? e.changedTouches[0] : e
@@ -158,40 +106,37 @@ let swipeX = 0, swipeY = 0
 /* ============ MORSE TRIGGER (..- = U) ============ */
 const showError = ref(false)
 const showPin = ref(false)
-let mSequence = []            // 'dot' | 'dash'
+let mSequence = []
 let mTimer = null
 let titleDownAt = 0
 function onTitleDown() { titleDownAt = Date.now() }
 function onTitleUp() {
   const dur = Date.now() - titleDownAt
-  const sym = dur > 500 ? 'dash' : 'dot'
-  pushMorse(sym)
+  pushMorse(dur > 500 ? 'dash' : 'dot')
 }
-function onTitleLeave() { if (titleDownAt) { onTitleUp() } }
+function onTitleLeave() { if (titleDownAt) onTitleUp() }
 function pushMorse(sym) {
   if (showError.value || showPin.value) return
   mSequence.push(sym)
   if (mSequence.length > 3) mSequence.shift()
   clearTimeout(mTimer)
-  mTimer = setTimeout(() => { mSequence = [] }, 1500) // reset kalau kelamaan
-  // cek ..- (dot dot dash)
+  mTimer = setTimeout(() => { mSequence = [] }, 1500)
   if (mSequence.length === 3 && mSequence[0] === 'dot' && mSequence[1] === 'dot' && mSequence[2] === 'dash') {
     showError.value = true
     mSequence = []
   }
 }
 
-/* ============ FAKE ERROR + SECRET WORD ============ */
-function onErrBoxClick() { /* klik biasa di box = no-op (orang awam refresh) */ }
-function onRefresh() { showError.value = false; init() }  // balik ke game
+/* ============ FAKE ERROR + SECRET ============ */
+function onErrBoxClick() {}
+function onRefresh() { showError.value = false; init() }
 let secretDownAt = 0
 function onSecretDown() { secretDownAt = Date.now() }
 function onSecretUp() {
-  const dur = Date.now() - secretDownAt
-  if (dur >= 500) showPin.value = true   // long-press kata "reset" -> PIN
+  if (Date.now() - secretDownAt >= 500) showPin.value = true
 }
 
-/* ============ PIN SCREEN ============ */
+/* ============ PIN ============ */
 const pin = ref('')
 const pinInput = ref(null)
 const CORRECT = (import.meta.env.VITE_DECOY_PIN || '1234').toString()
@@ -199,10 +144,9 @@ function onPinInput() {
   pin.value = pin.value.replace(/\D/g, '').slice(0, 4)
   if (pin.value.length === 4) {
     if (pin.value === CORRECT) emit('reveal')
-    else { pin.value = '' }  // salah -> reset (blank again)
+    else pin.value = ''
   }
 }
-// fokus input pas PIN screen muncul (biar keyboard langsung nyala)
 watch(showPin, (v) => { if (v) nextTick(() => pinInput.value?.focus()) })
 
 onMounted(() => {
@@ -215,17 +159,25 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.decoy { max-width: 460px; margin: 0 auto; padding: 18px; min-height: 100dvh; background: honeydew; color: #2c3e50; font-family: 'Source Sans Pro', Arial, sans-serif; user-select: none; }
+.decoy { max-width: 460px; margin: 0 auto; padding: 18px; min-height: 100dvh; background: honeydew; color: #2c3e50; font-family: 'Source Sans Pro', Arial, sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }
 .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
 .title { font-size: 52px; font-weight: 800; color: #35495e; cursor: pointer; margin: 0; letter-spacing: -2px; }
 .score { background: #9aa4af; color: #fff; padding: 8px 16px; border-radius: 6px; font-weight: 700; text-align: center; }
 .score small { display: block; font-size: 11px; opacity: .85; font-weight: 600; }
-.board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; background: #35495e; padding: 12px; border-radius: 10px; aspect-ratio: 1; }
-.cell { background: #41b883; border-radius: 7%; display: flex; align-items: center; justify-content: center; }
-.tile { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: honeydew; border-radius: 7%; font-weight: 800; font-size: 30px; color: #2c3e50; animation: chip-appear .18s ease; }
+
+/* board: relatif, chips absolut di-dalam */
+.board { position: relative; background: #35495e; padding: 2.5%; border-radius: 10px; aspect-ratio: 1; overflow: hidden; }
+.chip {
+  position: absolute; width: 21%; height: 21%;
+  display: flex; align-items: center; justify-content: center;
+  background: honeydew; border-radius: 7%; font-weight: 800; font-size: clamp(18px, 7vw, 34px);
+  color: #2c3e50;
+  transition: left .12s ease, top .12s ease;   /* slide halus antar cell */
+  animation: chip-appear .18s ease;
+}
 .v2 { background: #eee4da; color: #776e65; } .v4 { background: #ede0c8; color: #776e65; }
 .v8 { background: #f2b179; color: #fff; } .v16 { background: #f59563; color: #fff; } .v32 { background: #f67c5f; color: #fff; } .v64 { background: #f65e3b; color: #fff; }
-.v128 { background: #edcf72; color: #fff; } .v256 { background: #edcc61; color: #fff; } .v512 { background: #edc850; color: #fff; } .v1024 { background: #edc53f; color: #fff; font-size: 24px; } .v2048 { background: #edc22e; color: #fff; font-size: 22px; }
+.v128 { background: #edcf72; color: #fff; } .v256 { background: #edcc61; color: #fff; } .v512 { background: #edc850; color: #fff; } .v1024 { background: #edc53f; color: #fff; font-size: clamp(14px,5vw,26px); } .v2048 { background: #edc22e; color: #fff; font-size: clamp(13px,5vw,24px); }
 .hint { text-align: center; opacity: .55; font-size: 13px; margin-top: 14px; }
 
 @keyframes chip-appear { 0% { transform: scale(0); } 100% { transform: scale(1); } }
@@ -236,7 +188,7 @@ onBeforeUnmount(() => {
 .secret { color: #e8e8e8; }
 .refresh { background: #35495e; color: #fff; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; }
 
-/* PIN screen: blank + numeric */
+/* PIN screen */
 .pinwrap { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; z-index: 60; }
 .pininput { position: absolute; opacity: 0; }
 .dots { display: flex; gap: 14px; }
