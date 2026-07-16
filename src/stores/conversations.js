@@ -21,6 +21,7 @@ export const useConversationsStore = defineStore('conversations', {
       const i = this.items.findIndex((c) => c.conversationId === conv.conversationId)
       if (i >= 0) this.items[i] = { ...this.items[i], ...conv }
       else this.items.push(conv)
+      this.reorder()
     },
     setPartner(conversationId, partner) {
       const c = this.items.find((x) => x.conversationId === conversationId)
@@ -36,7 +37,15 @@ export const useConversationsStore = defineStore('conversations', {
     },
     setLast(conversationId, text) {
       const c = this.items.find((x) => x.conversationId === conversationId)
-      if (c) c.lastMessage = text
+      if (c) { c.lastMessage = text; c._ts = new Date().toISOString(); this.reorder() }
+    },
+    // reorder by lastMessage timestamp (recent di atas). lastMessage diset saat kirim/terima.
+    reorder() {
+      this.items.sort((a, b) => {
+        const ta = a._ts || '0'
+        const tb = b._ts || '0'
+        return tb.localeCompare(ta)
+      })
     },
   },
 })

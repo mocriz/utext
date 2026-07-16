@@ -68,10 +68,36 @@ export async function listConversations() {
     profs?.forEach((p) => (profilesMap[p.id] = p))
   }
 
-  return convIds.map((cid) => {
+  const list = convIds.map((cid) => {
     const partnerId = members.find((m) => m.conversation_id === cid && m.user_id !== me)?.user_id
-    return { conversationId: cid, partner: profilesMap[partnerId] || { id: partnerId } }
+    return { conversationId: cid, partner: profilesMap[partnerId] || { id: partnerId }, _ts: recent[cid] || '0' }
   })
+  // sort by pesan terbaru (recent di atas); conv kosong (ga ada pesan) di bawah
+  const recent = await recentAtMap(convIds)
+  list.sort((a, b) => {
+    const ta = recent[a.conversationId] || '0'
+    const tb = recent[b.conversationId] || '0'
+    return tb.localeCompare(ta)
+  })
+  return list
+}
+
+// Ambil last_message_at per conversation (buat sort recent di atas)
+// 1 query: max(created_at) tiap conv yang user punya
+async function recentAtMap(convIds) {
+  const map = {}
+  if (!convIds.length) return map
+  const { data } = await supabase
+    .from('messages')
+    .select('conversation_id, created_at')
+    .in('conversation_id', convIds)
+    .order('created_at', { ascending: false })
+    .limit(1000)
+  // karena sudah descending, pertama ketemu per conv = yang terbaru
+  for (const m of data || []) {
+    if (!(m.conversation_id in map)) map[m.conversation_id] = m.created_at
+  }
+  return map
 }
 
 // Cek apa sudah ada conversation 1-on-1 dengan user ini (biar ga dobel)
