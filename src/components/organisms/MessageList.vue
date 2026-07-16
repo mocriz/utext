@@ -35,6 +35,19 @@ const scroller = ref(null)
 const atBottom = ref(true)
 const flashId = ref(null)
 
+// bangun object replyTo utk render quote (cari pesan asli di list)
+function resolveReply(m) {
+  if (!m.reply_to) return null
+  const orig = props.messages.find((x) => x.id === m.reply_to)
+  if (!orig) return { id: m.reply_to, mine: m.senderId === props.meId, name: '', text: 'pesan telah dihapus' }
+  return {
+    id: orig.id,
+    mine: orig.senderId === props.meId,
+    name: orig.senderId === props.meId ? 'Anda' : (orig._partnerName || ''),
+    text: orig.plaintext || 'Foto',
+  }
+}
+
 // track posisi scroll (buat tombol jump-to-bottom)
 function isAtBottom() {
   const el = scroller.value
