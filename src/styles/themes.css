@@ -34,70 +34,126 @@
 /* default: ikut variable mode, ga override apa-apa */
 [data-preset='default'] { /* no override */ }
 
-/* nord: muted blue, cool */
-[data-theme='light'][data-preset='nord'] {
-  --accent: #5e81ac;
-  --accent-fg: #ffffff;
-  --bg: #eceff4;
-  --surface: #ffffff;
-  --surface-2: #e5e9f0;
-  --border: #d8dee9;
-  --bubble-me: #d8e2ec;
-  --bubble-me-fg: #2e3440;
+/* midnight: biru tua, moody */
+[data-theme='light'][data-preset='midnight'] {
+  --accent: #4f6bed; --accent-fg: #ffffff;
+  --bg: #eef1fb; --surface: #ffffff; --surface-2: #e6eaf8; --border: #d6dcf2;
+  --bubble-me: #d7def9; --bubble-me-fg: #1a2350;
 }
-[data-theme='dark'][data-preset='nord'] {
-  --accent: #88c0d0;
-  --accent-fg: #1a1f29;
-  --bg: #1a1f29;
-  --surface: #242933;
-  --surface-2: #2e3440;
-  --border: #3b4252;
-  --bubble-me: #3b4252;
-  --bubble-me-fg: #eceff4;
+[data-theme='dark'][data-preset='midnight'] {
+  --accent: #6c8cff; --accent-fg: #ffffff;
+  --bg: #0a0e1a; --surface: #121a2e; --surface-2: #1a2540; --border: #25325c;
+  --bubble-me: #2d4a8a; --bubble-me-fg: #eaf0ff;
 }
 
-/* ocean: teal, fresh */
-[data-theme='light'][data-preset='ocean'] {
-  --accent: #0d9488;
-  --accent-fg: #ffffff;
-  --bg: #ecfdfb;
-  --surface: #ffffff;
-  --surface-2: #d7f5f0;
-  --border: #c3ebf0;
-  --bubble-me: #a7e8df;
-  --bubble-me-fg: #06302b;
+/* solar: amber hangat */
+[data-theme='light'][data-preset='solar'] {
+  --accent: #d97706; --accent-fg: #ffffff;
+  --bg: #fdf6ec; --surface: #fffaf0; --surface-2: #f6ecd9; --border: #ecdcc0;
+  --bubble-me: #ffe8b3; --bubble-me-fg: #3a2c00;
 }
-[data-theme='dark'][data-preset='ocean'] {
-  --accent: #2dd4bf;
-  --accent-fg: #06231f;
-  --bg: #07151a;
-  --surface: #0d2029;
-  --surface-2: #14323d;
-  --border: #1e4a57;
-  --bubble-me: #0f5e57;
-  --bubble-me-fg: #e6fffb;
+[data-theme='dark'][data-preset='solar'] {
+  --accent: #f59e0b; --accent-fg: #1a1205;
+  --bg: #1c1407; --surface: #241a0a; --surface-2: #322510; --border: #4a3818;
+  --bubble-me: #6b4e16; --bubble-me-fg: #fdf0d6;
 }
 
-/* mono: grayscale, clean */
+/* rose: pink lembut */
+[data-theme='light'][data-preset='rose'] {
+  --accent: #e11d8f; --accent-fg: #ffffff;
+  --bg: #fdf0f7; --surface: #ffffff; --surface-2: #fbe3ef; --border: #f6cee0;
+  --bubble-me: #ffd6ec; --bubble-me-fg: #4a0030;
+}
+[data-theme='dark'][data-preset='rose'] {
+  --accent: #f43f9e; --accent-fg: #2a0018;
+  --bg: #1e0a16; --surface: #270d1d; --surface-2: #37132a; --border: #52203e;
+  --bubble-me: #7d1f54; --bubble-me-fg: #ffe3f1;
+}
+
+/* mono: grayscale clean */
 [data-theme='light'][data-preset='mono'] {
-  --accent: #374151;
-  --accent-fg: #ffffff;
-  --bg: #f5f5f5;
-  --surface: #ffffff;
-  --surface-2: #eeeeee;
-  --border: #e0e0e0;
-  --bubble-me: #e0e0e0;
-  --bubble-me-fg: #111111;
+  --accent: #374151; --accent-fg: #ffffff;
+  --bg: #f5f5f5; --surface: #ffffff; --surface-2: #eeeeee; --border: #e0e0e0;
+  --bubble-me: #e0e0e0; --bubble-me-fg: #111111;
 }
 [data-theme='dark'][data-preset='mono'] {
-  --accent: #9aa0a6;
-  --accent-fg: #111b21;
-  --bg: #16181a;
-  --surface: #1f2123;
-  --surface-2: #2a2d2f;
-  --border: #3a3d40;
-  --bubble-me: #3c4043;
-  --bubble-me-fg: #e8eaed;
+  --accent: #9aa0a6; --accent-fg: #111b21;
+  --bg: #16181a; --surface: #1f2123; --surface-2: #2a2d2f; --border: #3a3d40;
+  --bubble-me: #3c4043; --bubble-me-fg: #e8eaed;
+}
+
+/* ocean: teal fresh */
+[data-theme='light'][data-preset='ocean'] {
+  --accent: #0d9488; --accent-fg: #ffffff;
+  --bg: #ecfdfb; --surface: #ffffff; --surface-2: #d7f5f0; --border: #c3ebf0;
+  --bubble-me: #a7e8df; --bubble-me-fg: #06302b;
+}
+[data-theme='dark'][data-preset='ocean'] {
+  --accent: #2dd4bf; --accent-fg: #06231f;
+  --bg: #07151a; --surface: #0d2029; --surface-2: #14323d; --border: #1e4a57;
+  --bubble-me: #0f5e57; --bubble-me-fg: #e6fffb;
+}
+
+/* forest: green nature */
+[data-theme='light'][data-preset='forest'] {
+  --accent: #16a34a; --accent-fg: #ffffff;
+  --bg: #f1f8f1; --surface: #ffffff; --surface-2: #eaf5ea; --border: #d3ead3;
+  --bubble-me: #c8efc8; --bubble-me-fg: #11330f;
+}
+[data-theme='dark'][data-preset='forest'] {
+  --accent: #4ade80; --accent-fg: #06210f;
+  --bg: #0a160c; --surface: #0f1d12; --surface-2: #16291a; --border: #234329;
+  --bubble-me: #1e5631; --bubble-me-fg: #e6ffe9;
+}
+
+/* lavender: purple soft */
+[data-theme='light'][data-preset='lavender'] {
+  --accent: #7c3aed; --accent-fg: #ffffff;
+  --bg: #f6f3ff; --surface: #ffffff; --surface-2: #efebff; --border: #ddd3f7;
+  --bubble-me: #ddd0ff; --bubble-me-fg: #2a1063;
+}
+[data-theme='dark'][data-preset='lavender'] {
+  --accent: #a78bfa; --accent-fg: #1a1030;
+  --bg: #140e26; --surface: #1b1433; --surface-2: #271d44; --border: #3a2c5e;
+  --bubble-me: #4a3a7a; --bubble-me-fg: #ede7ff;
+}
+
+/* sunset: warm orange-pink */
+[data-theme='light'][data-preset='sunset'] {
+  --accent: #f43f5e; --accent-fg: #ffffff;
+  --bg: #fff4f1; --surface: #ffffff; --surface-2: #ffe9e4; --border: #f7cfc6;
+  --bubble-me: #ffd0c4; --bubble-me-fg: #5c151f;
+}
+[data-theme='dark'][data-preset='sunset'] {
+  --accent: #fb7185; --accent-fg: #2a0810;
+  --bg: #1e0d10; --surface: #271115; --surface-2: #3a1a1f; --border: #5a2a30;
+  --bubble-me: #7d2630; --bubble-me-fg: #ffe4e8;
+}
+
+/* nord: muted blue cool */
+[data-theme='light'][data-preset='nord'] {
+  --accent: #5e81ac; --accent-fg: #ffffff;
+  --bg: #eceff4; --surface: #ffffff; --surface-2: #e5e9f0; --border: #d8dee9;
+  --bubble-me: #d8e2ec; --bubble-me-fg: #2e3440;
+}
+[data-theme='dark'][data-preset='nord'] {
+  --accent: #88c0d0; --accent-fg: #1a1f29;
+  --bg: #1a1f29; --surface: #242933; --surface-2: #2e3440; --border: #3b4252;
+  --bubble-me: #3b4252; --bubble-me-fg: #eceff4;
+}
+
+/* elegant: cream + gold, refined (light) / charcoal + gold (dark) */
+[data-theme='light'][data-preset='elegant'] {
+  --accent: #b08d57; --accent-fg: #ffffff;
+  --bg: #f7f3ec; --surface: #fffdf9; --surface-2: #f0e9dc; --border: #e4d9c4;
+  --bubble-me: #efe2c8; --bubble-me-fg: #4a3a1f;
+  --bubble-them: #fffdf9; --bubble-them-fg: #3a3026;
+}
+[data-theme='dark'][data-preset='elegant'] {
+  --accent: #c9a875; --accent-fg: #1a1409;
+  --bg: #14110d; --surface: #1d1913; --surface-2: #28221a; --border: #3a3225;
+  --bubble-me: #4a3f2a; --bubble-me-fg: #f3ead4;
+  --bubble-them: #211c15; --bubble-them-fg: #ece3d2;
 }
 
 /* custom theme (user-set) — vars di-inject lewat JS ke :root */

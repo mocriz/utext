@@ -49,8 +49,8 @@ function pick(v) {
 function onDocClick(e) {
   if (open.value && root.value && !root.value.contains(e.target)) open.value = false
 }
-onMounted(() => document.addEventListener('click', onDocClick))
-onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
+onMounted(() => document.addEventListener('click', onDocClick, true))
+onBeforeUnmount(() => document.removeEventListener('click', onDocClick, true))
 </script>
 
 <style scoped>
@@ -69,9 +69,9 @@ onBeforeUnmount(() => document.removeEventListener('click', onDocClick))
 .dd-caret { flex: none; transition: transform 160ms var(--ease-out); }
 .dd-trigger.open .dd-caret { transform: rotate(180deg); }
 
-/* popup di ATAS trigger, scroll vertikal */
+/* popup di BAWAH trigger, scroll vertikal */
 .dd-pop {
-  position: absolute; bottom: calc(100% + 6px); left: 0; right: 0;
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
   max-height: 220px; overflow-y: auto; z-index: 50;
   padding: 6px; background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--radius);
