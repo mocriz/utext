@@ -20,6 +20,14 @@
       <Icon name="mdi:image-outline" :size="22" />
     </button>
 
+    <PhotoPreview
+      v-if="preview"
+      :name="preview.name"
+      :url="preview.url"
+      @send="$emit('confirm-photo')"
+      @cancel="$emit('cancel-photo')"
+    />
+
     <div class="field">
       <TextArea
         ref="ta"
@@ -66,6 +74,7 @@
 import { ref, computed } from 'vue'
 import Icon from '../atoms/Icon.vue'
 import TextArea from '../atoms/TextArea.vue'
+import PhotoPreview from '../molecules/PhotoPreview.vue'
 
 const props = defineProps({
   draft: { type: String, default: '' },
