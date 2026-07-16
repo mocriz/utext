@@ -126,7 +126,7 @@ import {
   updateDisplayName as rpcUpdateDisplayName, uploadAvatar, searchUsers, startConversationWith,
 } from '../../lib/chat'
 import { backupToDrive, restoreFromDrive, updateUsername, getMyProfile, updateDisplayName, updateAvatar, softDeleteAccount } from '../../lib/auth'
-import { cacheMessage } from '../../lib/dbCache'
+import { cacheMessage, enqueueMessage, getQueue, dequeueMessage } from '../../lib/dbCache'
 
 const ui = useUiStore()
 const auth = useAuthStore()
@@ -440,6 +440,20 @@ async function onSend() {
   }
   const replyId = replyingTo.value?.id || null
   replyingTo.value = null
+
+  // OFFLINE: simpen ke outbox queue, tampilin bubble pending
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    const localId = 'pending-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)
+    const item = { id: localId, convId: cid, partnerId: activePartner.value.id, text: text.trim(), replyTo: replyId, createdAt: new Date().toISOString() }
+    await enqueueMessage(item)
+    room.messages.push(enrich({ id: localId, senderId: myId.value, plaintext: text, createdAt: item.createdAt, reply_to: replyId, receipt: 'pending' }))
+    conv.setLast(cid, text.trim())
+    cacheMessage({ id: localId, convId: cid, plaintext: text, senderId: myId.value, createdAt: item.createdAt, reply_to: replyId })
+    scrollToBottomHard()
+    refocusComposer()
+    return
+  }
+
   const sent = await sendText(cid, activePartner.value.id, text, replyId) // kirim ISI ASLI
   conv.setLast(cid, text.trim())
   room.messages.push(enrich({ id: sent.id, senderId: myId.value, plaintext: text, createdAt: sent.createdAt, reply_to: replyId, receipt: 'sent' }))
@@ -453,6 +467,39 @@ async function onSend() {
   }
   refocusComposer() // safety net: pastikan textarea tetap fokus (keyboard nyala)
   scrollToBottomHard() // kirim -> SELALU loncat ke bawah (walau user lagi di atas)
+}
+
+// ---- flush outbox queue pas online lagi ----
+// (dipanggil dari event 'online' & pas app mount kalau ada sisa queue)
+async function flushQueue() {
+  let q = []
+  try { q = await getQueue() } catch { return }
+  if (!q.length) return
+  // cuma flush kalau beneran online
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return
+  for (const item of q) {
+    try {
+      const sent = await sendText(item.convId, item.partnerId, item.text, item.replyTo)
+      // ganti bubble pending -> terkirim (cari by localId)
+      const i = room.messages.findIndex((m) => m.id === item.id)
+      if (i >= 0) {
+        room.messages[i].id = sent.id
+        room.messages[i].receipt = 'sent'
+        room.messages[i].createdAt = sent.createdAt
+      }
+      // update cache
+      await dequeueMessage(item.id)
+      cacheMessage({ id: sent.id, convId: item.convId, plaintext: item.text, senderId: myId.value, createdAt: sent.createdAt, reply_to: item.replyTo })
+      // kalau bot, trigger reply
+      if (item.partnerId === 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb') {
+        supabase.functions.invoke('bot-reply', { body: { record: { sender_id: myId.value, conversation_id: item.convId } } })
+          .catch((e) => console.warn('bot invoke failed:', e?.message))
+      }
+    } catch (e) {
+      // kalau masih gagal (offline lagi), biarin di queue
+      console.warn('flush item gagal:', e?.message)
+    }
+  }
 }
 
 // ---- photo (preview dulu) ----
@@ -678,6 +725,11 @@ onMounted(async () => {
       if (c) onOpen(c)
     }
   } catch {}
+
+  // OFFLINE: flush outbox queue pas koneksi balik (cross-platform, iOS-safe)
+  window.addEventListener('online', flushQueue)
+  // flush sisa queue kalau ada (misal app dibuka pas udah online)
+  flushQueue()
 
   // auto-focus field text kalau user ngetik pakai keyboard fisik (bukan saat di input/modal lain)
   window.addEventListener('keydown', (e) => {
