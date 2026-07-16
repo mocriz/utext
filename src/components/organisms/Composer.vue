@@ -16,7 +16,7 @@
     </div>
 
     <input ref="fileInput" type="file" accept="image/*" hidden @change="$emit('pick', $event)" />
-    <button class="media-btn" title="Kirim foto" @click="fileInput?.click()">
+    <button class="media-btn" title="Kirim foto" @mousedown.prevent @click="fileInput?.click()">
       <Icon name="mdi:image-outline" :size="22" />
     </button>
 
@@ -40,6 +40,7 @@
       class="send-btn"
       :disabled="!canSend"
       title="Kirim"
+      @mousedown.prevent
       @click="onSend"
     >
       <Icon name="mdi:send" :size="20" />

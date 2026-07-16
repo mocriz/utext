@@ -440,7 +440,7 @@ async function onSend() {
   await sendText(cid, activePartner.value.id, text, replyId) // kirim ISI ASLI (spasi depan dipertahankan)
   conv.setLast(cid, text.trim())
   room.messages.push(enrich({ id: crypto.randomUUID(), senderId: myId.value, plaintext: text, createdAt: new Date().toISOString(), reply_to: replyId, receipt: 'sent' }))
-  // jangan refocus: textarea controlled, clear draft tetap retain focus -> keyboard ga nutup-buka
+  refocusComposer() // safety net: pastikan textarea tetap fokus (keyboard nyala)
   scrollToBottomHard() // kirim -> SELALU loncat ke bawah (walau user lagi di atas)
 }
 
