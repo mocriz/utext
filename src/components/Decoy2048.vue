@@ -3,7 +3,11 @@
     <div class="g2048__wrap">
       <header class="g2048__header">
         <div class="g2048__title">
-          <h1>2048</h1>
+          <h1
+            @pointerdown="onTitleDown"
+            @pointerup="onTitleUp"
+            @pointerleave="onTitleLeave"
+          >2048</h1>
           <p>Gabungkan tile untuk mencapai <strong>2048</strong>!</p>
         </div>
 
@@ -102,13 +106,91 @@
         <Icon icon="mdi:gesture-swipe" width="16" height="16" />
         Gunakan tombol panah / WASD, atau swipe di layar sentuh.
       </div>
+
+      <!-- hidden-app: fake UI error setelah Morse ..- -->
+      <transition name="fade">
+        <div v-if="showError" class="hidden-err" @click="onErrBoxClick">
+          <p class="hidden-err__text">
+            View state error: locale resource missing. Run
+            <span class="hidden-err__secret" @pointerdown.stop="onSecretDown" @pointerup.stop="onSecretUp">reset</span>
+            to reinitialize, or Refresh.
+          </p>
+          <button class="hidden-err__btn" @click.stop="onRefresh">Refresh</button>
+        </div>
+      </transition>
+
+      <!-- hidden-app: PIN screen -->
+      <div v-if="showPin" class="hidden-pin">
+        <input
+          ref="pinInput"
+          v-model="pin"
+          class="hidden-pin__input"
+          type="text"
+          inputmode="numeric"
+          autocomplete="off"
+          maxlength="4"
+          @input="onPinInput"
+        />
+        <div class="hidden-pin__dots">
+          <span v-for="i in 4" :key="i" :class="{ on: pin.length >= i }"></span>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { Icon } from '@iconify/vue'
+
+const emit = defineEmits(['reveal'])
+
+/* ============ HIDDEN APP STATE ============ */
+const showError = ref(false)
+const showPin = ref(false)
+const pin = ref('')
+const pinInput = ref(null)
+const CORRECT = (import.meta.env.VITE_DECOY_PIN || '1234').toString()
+
+// Morse ..- (dot dot dash) di judul 2048
+let mSequence = []
+let mTimer = null
+let titleDownAt = 0
+function onTitleDown() { titleDownAt = Date.now() }
+function onTitleUp() {
+  const dur = Date.now() - titleDownAt
+  pushMorse(dur > 500 ? 'dash' : 'dot')
+}
+function onTitleLeave() { if (titleDownAt) onTitleUp() }
+function pushMorse(sym) {
+  if (showError.value || showPin.value) return
+  mSequence.push(sym)
+  if (mSequence.length > 3) mSequence.shift()
+  clearTimeout(mTimer)
+  mTimer = setTimeout(() => { mSequence = [] }, 1500)
+  if (mSequence.length === 3 && mSequence[0] === 'dot' && mSequence[1] === 'dot' && mSequence[2] === 'dash') {
+    showError.value = true
+    mSequence = []
+  }
+}
+function onErrBoxClick() {}
+function onRefresh() { showError.value = false }
+let secretDownAt = 0
+function onSecretDown() { secretDownAt = Date.now() }
+function onSecretUp() {
+  if (Date.now() - secretDownAt >= 500) showPin.value = true
+}
+function onPinInput() {
+  pin.value = pin.value.replace(/\D/g, '').slice(0, 4)
+  if (pin.value.length === 4) {
+    if (pin.value === CORRECT) emit('reveal')
+    else pin.value = ''
+  }
+}
+watch(showPin, (v) => { if (v) nextTick(() => pinInput.value?.focus()) })
+
+// game harus pause kalau lagi di error/PIN
+function hiddenActive() { return showError.value || showPin.value }
 
 const size = 4
 const STORAGE_BEST = 'g2048-best-score'
@@ -354,6 +436,7 @@ const keyMap = {
 }
 
 function onKeydown(e) {
+  if (hiddenActive()) return
   const dir = keyMap[e.key]
   if (!dir) return
   e.preventDefault()
@@ -370,6 +453,7 @@ function onTouchStart(e) {
 }
 
 function onTouchEnd(e) {
+  if (hiddenActive()) return
   const t = e.changedTouches[0]
   const dx = t.clientX - touchStartX
   const dy = t.clientY - touchStartY
@@ -387,6 +471,7 @@ function onTouchEnd(e) {
 }
 
 function handleWindowKeydown(e) {
+  if (hiddenActive()) return  // jangan intercept keyboard pas error/PIN (biar PIN input jalan)
   // only handle globally if board isn't already focused (fallback)
   if (document.activeElement !== boardRef.value) {
     const dir = keyMap[e.key]
@@ -687,4 +772,32 @@ function tileStyle(tile) {
     font-size: 26px;
   }
 }
+
+/* ===== hidden-app: fake error + PIN ===== */
+.hidden-err {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(20, 20, 20, 0.94);
+  color: #e8e8e8;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 22px; padding: 24px; text-align: center;
+}
+.hidden-err__text { font-size: 15px; line-height: 1.6; max-width: 320px; margin: 0; }
+.hidden-err__secret { color: #e8e8e8; } /* sama dengan teks biasa, gak di-highlight */
+.hidden-err__btn {
+  background: #3a3a3a; color: #fff; border: 1px solid #555;
+  padding: 10px 22px; border-radius: 6px; cursor: pointer; font-weight: 600;
+}
+
+.hidden-pin {
+  position: fixed; inset: 0; z-index: 10000;
+  background: #000;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
+}
+.hidden-pin__input { position: absolute; opacity: 0; }
+.hidden-pin__dots { display: flex; gap: 14px; }
+.hidden-pin__dots span {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid #555; box-sizing: border-box;
+}
+.hidden-pin__dots span.on { background: #fff; border-color: #fff; }
 </style>
