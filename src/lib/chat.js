@@ -254,6 +254,7 @@ export function subscribeMessages(conversationId, onNew, onUpdate) {
           const plaintext = m.ciphertext ? await decryptText(ss, m.ciphertext, m.nonce) : null
           onNew({
             id: m.id,
+            conversationId,
             senderId: m.sender_id,
             plaintext,
             mediaPath: m.media_path,
@@ -288,6 +289,14 @@ export function subscribeMessages(conversationId, onNew, onUpdate) {
       }
     })
 
+  // kembalikan fn unsubscribe biar caller bisa cleanup (hindari leak channel antar room)
+  return () => {
+    try { supabase.removeChannel(channel) } catch {}
+    msgChannels.delete(conversationId)
+    const t = pollTimers.get(conversationId)
+    if (t) { clearInterval(t); pollTimers.delete(conversationId) }
+  }
+
   async function startPolling() {
     polling = true
     const timer = setInterval(async () => {
@@ -304,7 +313,7 @@ export function subscribeMessages(conversationId, onNew, onUpdate) {
           for (const m of data) {
             lastSeen = Math.max(lastSeen, new Date(m.created_at).getTime())
             const plaintext = m.ciphertext ? await decryptText(ss, m.ciphertext, m.nonce) : null
-            onNew({ id: m.id, senderId: m.sender_id, plaintext, mediaPath: m.media_path, createdAt: m.created_at, reply_to: m.reply_to || null })
+            onNew({ id: m.id, conversationId, senderId: m.sender_id, plaintext, mediaPath: m.media_path, createdAt: m.created_at, reply_to: m.reply_to || null })
           }
         }
       } catch {}

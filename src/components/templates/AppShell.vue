@@ -257,6 +257,8 @@ async function onOpen(c) {
   room.messages = (await loadMessages(c.conversationId)).map(enrich)
   msgCh?.()
   msgCh = subscribeMessages(c.conversationId, (m) => {
+    // defense: jangan tampilkan pesan conv lain ke room aktif (anti leak antar room)
+    if (m.conversationId && m.conversationId !== c.conversationId) return
     if (seenMsgIds.has(m.id)) return
     seenMsgIds.add(m.id)
     enrich(m)
@@ -291,9 +293,9 @@ async function onOpen(c) {
   setupPresence(c.conversationId)
   // decrypt foto yg ada
   for (const m of room.messages) if (m.mediaPath) await preload(m)
-  // update last message di list (decrypted)
+  // update last message di list (decrypted) — TANPA reorder (posisi list tetap pas buka room)
   const last = room.messages[room.messages.length - 1]
-  if (last) conv.setLast(c.conversationId, last.plaintext || 'Foto')
+  if (last) conv.setLastText(c.conversationId, last.plaintext || 'Foto')
   // scroll ke bawah (pesan terbaru) — berulang biar mentok bener walau foto masih load
   scrollToBottomHard()
   focusComposer() // desktop auto-focus; mobile skip biar ga langsung popup keyboard

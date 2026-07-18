@@ -39,6 +39,12 @@ export const useConversationsStore = defineStore('conversations', {
       const c = this.items.find((x) => x.conversationId === conversationId)
       if (c) { c.lastMessage = text; c._ts = new Date().toISOString(); this.reorder() }
     },
+    // update preview text aja (pas buka room), TIDAK ubah _ts / tidak reorder
+    // -> posisi list tetap (room yang diklik di bawah gak loncat ke atas)
+    setLastText(conversationId, text) {
+      const c = this.items.find((x) => x.conversationId === conversationId)
+      if (c) c.lastMessage = text
+    },
     // reorder by lastMessage timestamp (recent di atas). lastMessage diset saat kirim/terima.
     reorder() {
       this.items.sort((a, b) => {
