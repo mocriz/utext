@@ -10,6 +10,15 @@ const auth = useAuthStore()
 const showApp = computed(() => auth.isReady && auth.isAuthed && auth.identityStatus !== 'need_restore' && auth.setupDone)
 const showSetup = computed(() => auth.isReady && auth.isAuthed && auth.identityStatus === 'new' && !auth.setupDone)
 
+// PWA install: tangkap beforeinstallprompt biar bisa dipicu dari Settings
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault()
+    window.__pwaDeferred = e
+  })
+  window.addEventListener('appinstalled', () => { window.__pwaDeferred = null })
+}
+
 // HIDDEN MODE: decoy 2048 dulu, chat di-lazy-load pas PIN benar
 const HIDDEN = import.meta.env.VITE_HIDDEN_APP === 'true'
 const revealed = ref(false)

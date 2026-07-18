@@ -132,6 +132,13 @@
                 </div>
               </div>
 
+              <div class="field">
+                <label>Pasang sebagai aplikasi</label>
+                <p class="muted small">Instal uText ke home screen agar bisa dibuka tanpa browser (offline-ready).</p>
+                <BaseButton v-if="canInstall" variant="primary" @click="installApp">Pasang aplikasi</BaseButton>
+                <p v-else class="hint">Aplikasi sudah terpasang atau browser tidak mendukung install.</p>
+              </div>
+
               <div class="field danger-zone">
                 <label>Hapus akun</label>
                 <p class="muted small">Hapus akun (soft delete). Percakapan di sisi lawan tetap tersimpan, dan kamu bisa masuk kembali lewat Gmail yang sama.</p>
@@ -175,6 +182,23 @@ const usernameStatus = ref('') // '' | checking | available | taken | invalid
 const saving = ref(false)
 const deleting = ref(false)
 const backing = ref(false)
+const canInstall = ref(false)
+
+// PWA install: cek apakah ada prompt yang ditangkap di App.vue
+function refreshInstallable() {
+  canInstall.value = !!window.__pwaDeferred
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('appinstalled', () => { canInstall.value = false; window.__pwaDeferred = null })
+}
+async function installApp() {
+  const promptEvt = window.__pwaDeferred
+  if (!promptEvt) return
+  promptEvt.prompt()
+  await promptEvt.userChoice
+  window.__pwaDeferred = null
+  canInstall.value = false
+}
 const avatarInput = ref(null)
 const avatarName = ref('')
 const accent = ref('#1a73e8')
@@ -185,6 +209,8 @@ const USER_RE = /^[a-z0-9_]{1,30}$/
 watch(() => props.profile, (p) => {
   if (p) { usernameDraft.value = p.username || ''; displayDraft.value = p.display_name || '' }
 }, { immediate: true })
+
+watch(() => props.open, (o) => { if (o) refreshInstallable() })
 
 let checkTimer = null
 async function onUsernameType(v) {
