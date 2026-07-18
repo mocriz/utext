@@ -4,7 +4,7 @@
 // CATATAN: iOS PWA gak dukung Web Push. Android/desktop OK.
 
 // Ganti dengan VAPID_PUBLIC_KEY lu (dari Supabase: Settings > Edge Functions > VAPID)
-export const VAPID_PUBLIC_KEY = 'BPsLuijn5kG9Vv8Hh8mIqHhQ1Z3Z3Z3Z3Z3Z3Z3Z3Z3Z3Z3Z3Z3Z3Z3Z3Z3Z3Z3Z3Z3Z3Z3' // placeholder, ganti!
+export const VAPID_PUBLIC_KEY = 'BEe_1UMyCIpI0pr1ntzPgsRGdkTwysm96OuTN9CYcmucJAx02VZuoJPTgvFHJ9hazfLCjob5U9E20mRb8VODHwI' // placeholder, ganti!
 
 import { supabase } from './supabase'
 
